@@ -288,7 +288,6 @@ def parseBes(file):
         if col in dat.columns:
             dat.drop(col,axis=1,inplace=True)
     dat=dat.convert_objects(convert_numeric=True)
-    print(dat.columns)
     #Removing white dwarfs:
     dat=dat.loc[dat['logg']<6.5]
     dat.loc[dat.Mass<0.1,'Mass']=0.1
@@ -1321,12 +1320,7 @@ def GenPls(allstars,petigura):
             solarsyst=solarsyst[booltake] #remove excess planets from per-system list
         tran_pls_i.loc[solarsyst,'index_pl']=tran_pls_i.loc[solarsyst,'P'].argsort()
     #Making index "starname"+"_"+"planet number"
-    print(tran_pls_i['parent'].values.astype(str),plnames[tran_pls_i['index_pl'].values.astype(int)])
     tran_pls_i=tran_pls_i.set_index(np.core.defchararray.add(tran_pls_i['parent'].values.astype(str),plnames[tran_pls_i['index_pl'].values.astype(int)]).astype(str))
-    print(tran_pls_i.index.values[:20])
-    print(np.max(tran_pls_i.index_pl))
-    print(np.argmax(tran_pls_i.index_pl))
-    print(np.min(tran_pls_i.index_pl))
 
     #Eccentricity, omega and incl:
     kipping= np.random.normal([1.12,3.09,0.697,3.27],[0.1,0.3,0.2,0.34])

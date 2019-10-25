@@ -68,6 +68,8 @@ def FieldOverGap(rel_alpha, rel_delta, fieldsize,
     return outarr
 
 def Ncameras(rel_alpha, rel_delta,camera_offset=6.5*u.deg,FoV_radius=18.9*u.deg,edgecut=1*u.deg):
+    #Calculates number of cameras that observe given an alpha/delta position relative to the spacecraft centre
+    
     #distance from each of the cameras:
     allcams=SkyCoord([(alph,delt) for alph in [-1*camera_offset,camera_offset] for delt in [-1*camera_offset, camera_offset]])
     cam_seps=allcams.separation(SkyCoord(rel_alpha,rel_delta)).value
@@ -103,15 +105,16 @@ def StarPositions(fieldcent_sc, scope_frame, Angle_with_RADEC=0*u.deg, starsep=7
     starcents_wrt_field=SkyCoord(lon=alphs, lat=decs, frame=field_frame)
     return starcents_wrt_field
 
-def InFoV(field_ra,field_dec,Q=1,fieldsize=200,raPlatform=10,decPlatform=10,group='all'):
+def InFoV(field_ra,field_dec, raPlatform,decPlatform, Q=1,fieldsize=100,group='all'):
     #INPUTS:
     # field_ra - RA of field in deg
     # field_de - DEC of field in deg
-    # Q - quarter (srarting at 1)
-    # fieldsize - size of field in pixels
     # raPlatform - RA of platform in deg
     # decPlatform - dec of platform in deg
+    # Q - quarter (srarting at 1)
+    # fieldsize - size of field in pixels
     # group - either specific group (1-4) or 'all'
+    
     import referenceFrames as rf
     from math import sin, cos, tan, asin, atan, radians, degrees
     import shapely.geometry as sg
@@ -161,7 +164,6 @@ def InFoV(field_ra,field_dec,Q=1,fieldsize=200,raPlatform=10,decPlatform=10,grou
         #                                     radians(raPlatform), radians(decPlatform), (Q-1)*(np.pi/2),  \
         #                                     radians(tiltAngles[0]), radians(azimuthAngles[0]), 0, focalLength)
         corner_dists=[]
-        
         fieldcen=rf.skyToFocalPlaneCoordinates(radians(field_ra), radians(field_dec), 
                                                radians(raTelescope[gr] + raPlatform), radians(decTelescope[gr] + decPlatform), (Q-1)*(np.pi/2),  \
                                                radians(tiltAngles[0]), radians(azimuthAngles[0]), 0, focalLength)
@@ -195,35 +197,19 @@ def InFoV(field_ra,field_dec,Q=1,fieldsize=200,raPlatform=10,decPlatform=10,grou
             observed_by[gr]=['Outside_FoV']
     return observed_by
 
-def GenerateSimFields(Longcen, Latcen, Nfields=60, Angle_with_RADEC=0*u.deg, FoV_square=32.5*u.deg, camera_offset=6.5*u.deg):
+def GenerateSimFields(Longcen, Latcen, Nfields=60, Angle_with_RADEC=0*u.deg, FoV_square=32.5*u.deg, fieldsize=100):
     #Generates star field positions given:
-    # RAcen & DECcen - central RA and Dec of all four cameras
-    # Nfields - number of fields across the FoV
+    # Longcen & Latcen - central galactic coordinates of the centre of all fields
+    # Nfields - number of fields
     # Angle_with_RADEC - angle between the camera x-y frame and the ra-dec plane.
+    # FoV_square - angle between the camera x-y frame and the ra-dec plane.
+    # fieldsize - size of subField in pixels
     
     spacecraft_cent = SkyCoord(l=Longcen, b=Latcen, frame='galactic')
     spacecraft_cent_radec=spacecraft_cent.transform_to(ICRS)
     
     scope_frame = SkyOffsetFrame(origin=spacecraft_cent.transform_to(astropy.coordinates.GeocentricTrueEcliptic))
-    #,rotation=Angle_with_RADEC)
-    '''
-    if Angle_with_RADEC == 0*u.deg:
-        #Aligning Plato field with nearest
-        celpole=SkyCoord(lon=RAcen, lat=89.99999998*u.deg, frame=scope_frame)
-        if spacecraft_cent.transform_to().lat.deg>0:
-            #Northern Ecliptic sky
-            eclpole=SkyCoord(lon=RAcen, lat=89.99999998*u.deg, frame=astropy.coordinates.GeocentricTrueEcliptic).transform_to(scope_frame)
-        else:
-            #Southern Ecliptic sky
-            eclpole=SkyCoord(lon=RAcen, lat=-89.99999998*u.deg, frame=astropy.coordinates.HeliocentricTrueEcliptic).transform_to(scope_frame)
-        Angle_with_RADEC=celpole.position_angle(eclpole)
     
-    scope_frame = SkyOffsetFrame(origin=spacecraft_cent,rotation=Angle_with_RADEC)
-    print(Angle_with_RADEC.to(u.deg))
-    '''
-    
-    fieldsize=100*15*u.arcsec #100pix
-    gapsize=111.11*15*u.arcsec #100pix
     n_good_fields=0
     
     field_list=np.random.normal(0, 0.35*FoV_square.to(u.deg).value,(Nfields,2))
@@ -239,8 +225,9 @@ def GenerateSimFields(Longcen, Latcen, Nfields=60, Angle_with_RADEC=0*u.deg, FoV
             obsbty=[]
             for q in range(4):
                 
-                observable=InFoV(field_radecs.ra.deg,field_radecs.dec.deg,Q=q,fieldsize=200,
-                                 raPlatform=spacecraft_cent_radec.ra.deg,decPlatform=spacecraft_cent_radec.dec.deg)
+                observable=InFoV(field_radecs.ra.deg[n_field], field_radecs.dec.deg[n_field],
+                                 spacecraft_cent_radec.ra.deg, spacecraft_cent_radec.dec.deg,
+                                 Q=q,fieldsize=200)
                 obsbty+=[obs for obs in observable]
             if 'CCD_gap' in obsbty or np.all(obsbty=='Outside_FoV'):
                 field_list[n_field,0]=np.nan
@@ -728,7 +715,6 @@ def SelectFieldstars(platosimstarcat, stars_all, prop_dip = 0.5):
     
     dip_targets=stars_all.loc[(stars_all.type=='target')&(stars_all.targ_has_dip.values==True)]
     nodip_targets=stars_all.loc[(stars_all.type=='target')&(stars_all.targ_has_dip.values==False)]
-    print(np.shape(stars_all),np.shape(dip_targets),np.shape(nodip_targets))#nodip_targets=dips.loc[(dips.A_type=='target')&(~dips.targ_has_dip.values)]
     
     #Getting dips:
     newstarcat=pd.DataFrame()
@@ -746,14 +732,10 @@ def SelectFieldstars(platosimstarcat, stars_all, prop_dip = 0.5):
         
         nodips_dist2field=abs(nodip_targets.latitude.values-allfieldstars.loc[asdips,'field_cen_lat'].values[0])
         nodip_targets=nodip_targets.iloc[np.argsort(nodips_dist2field)]
-        print(nodip_targets.iloc[:50].index.values)
         nodipdf=nodip_targets.iloc[:np.sum(~asdips)]
         nodip_targets=nodip_targets.iloc[np.sum(~asdips):]
         
         #print(dipstotake)
-        print(np.sum(asdips))
-        print(np.sum(dips_dist2field<5))
-        print(np.sum(nodips_dist2field<5))
         #print(np.argsort(abs(dip_targets.latitude.values-allfieldstars.loc[asdips].iloc[0]['field_cen_lat']))<np.sum(asdips))
         #print(np.argsort(abs(nodip_targets.latitude.values-allfieldstars.loc[~asdips].iloc[0]['field_cen_lat']))<np.sum(~asdips))
         #print(dip_targets.loc[dipstotake,'latitude'])
@@ -781,10 +763,8 @@ def SelectFieldstars(platosimstarcat, stars_all, prop_dip = 0.5):
         for col in ['field_cen_ra','field_cen_long','field_cen_dec','field_cen_lat','scope_cen_ra','scope_cen_dec']:
             dipdf[col]=allfieldstars.iloc[0][col]
             nodipdf[col]=allfieldstars.iloc[0][col]
-        print(nodipdf.index.values)
         newstarcat=newstarcat.append(dipdf)
         newstarcat=newstarcat.append(nodipdf)
-        print(newstarcat.index.values)
     return newstarcat
 
 def CombineCats(newstarcat, stars_all, ebs_all, pls_all, hemi, outfileloc, prop_dip = 0.5,lctimes=np.arange(0,365.25*2,25/86400),num_quarts=8,overwrite=True):
@@ -996,16 +976,27 @@ def GenP5(morestars,npart,hemisphere,mag='Pmag',siglimit=5,maglimit=13,T=730.5):
 
 
 def SavePlatosim3Python(fieldID, scoperadec, fieldradec, field_file_loc, num_quarts=8):
+    '''
+    # Saving PlatoSim3 files.
+    #
+    #INPUTS:
+    # - fieldID
+    # - scoperadec - astropy SkyCoord for the spacecraft
+    # - fieldradec - astropy SkyCoord for the centre of the field
+    # - field_file_loc - file location to save stuff
+    # - num_quarts - number of quarters to generate.
+    '''
 
     pyfile_contents  =  Path('PlatoSimPythonfileHeader.py').read_text()
-    yamlfile_contents = Path('PlatoSimPythonfileHeader.yaml').read_text()
+    #yamlfile_contents = Path('PlatoSimPythonfileHeader.yaml').read_text()
 
     for group in np.arange(0,4)+1:
         for scope in np.arange(0,6)+1:
             for quart in np.arange(0,num_quarts)+1:
                 #Check if it is indeed observed:
-                observed=InFoV(scoperadec[0],scoperadec[1],Q=quart,
-                            raPlatform=scoperadec[0],decPlatform=scoperadec[1],group=group)
+                observed=InFoV(fieldradec[0],fieldradec[1],
+                               scoperadec[0],scoperadec[1],
+                               Q=quart,group=group)
                 if observed[group] not in ['CCD_gap','Outside_FoV']:
                     pyname=os.path.join(field_file_loc,fieldID + "_Q{0:1d}_group{1:1d}_camera{2:1d}_run.py".format(quart, group, scope))
 
