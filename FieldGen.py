@@ -253,7 +253,7 @@ def FieldGen(hemisphere='North',N_fields=1,outfileloc='/data/PLATO/Sims',
                             [scope_cen_radec.ra.value, scope_cen_radec.dec.value], 
                             [field_cen_ra,field_cen_dec],
                             field_file_loc,num_quarts)
-    imports()
+    #imports() this was just to generate requirements
 
 def StellarStuff(allfieldstars):
     #Initialising LDs and GDs (sorting by FeH)
