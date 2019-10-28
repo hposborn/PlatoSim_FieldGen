@@ -332,7 +332,8 @@ def getPLs(fieldstars,stars,field_file_loc,num_quarts=8,var_prop=0.5,SNRthresh=3
         #Adding dependence on number of iterations to make later runs more likely to find a solution...
         tran_pls_i['incl']=np.arccos(np.random.uniform(-1*iterations**-0.2,iterations**-0.2,len(tran_pls_i)))
         tran_pls_i['index_pl']=np.zeros(tran_pls_i.shape[0])
-
+        
+        #Adding suffixes for planets going outward in period (and cutting planets in systems >10pls)
         plnames=np.array(['_b','_c','_d','_e','_f','_g','_h','_i','_j','_k','_l'])
         for unq_id in np.unique(tran_pls_i['parent'].values):
             solarsyst=tran_pls_i.index.values[tran_pls_i['parent']==unq_id]
@@ -340,8 +341,9 @@ def getPLs(fieldstars,stars,field_file_loc,num_quarts=8,var_prop=0.5,SNRthresh=3
         tran_pls_i=tran_pls_i.loc[tran_pls_i['index_pl']<=10]
         
         tran_pls_i=tran_pls_i.set_index(np.core.defchararray.add(tran_pls_i['parent'].values.astype(str),
-                                                                 plnames[tran_pls_i['index_pl'].values.astype(int)]).astype(str))
-
+                                                 plnames[tran_pls_i['index_pl'].values.astype(int)]).astype(str))
+        
+        #Randomly assigning 66% of multiplanet systems to be co-planar with first planet
         for unqpar in np.unique(tran_pls_i.loc[tran_pls_i['index_pl'].values>=1,'parent']):
             ind=tran_pls_i.loc[tran_pls_i['parent'].values==unqpar].index.values
             if np.random.random()>0.33:
@@ -969,6 +971,9 @@ def getBPLs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8,var_prop=0.5,SN
                     (tran_bpls_i['P']*86400./(2. * np.pi * G * (tran_bpls_i['A_Ms']*Msun + tran_bpls_i['Ms']*Msun)))**(1./3.)
 
         tran_bpls_i['dilution']=(np.power(2.512,stars.loc[tran_bpls_i['blend_parent'],'Pmag'].values-tran_bpls_i['A_Pmag']))        
+        #Removing planets orbiting within 2Rs:
+        tran_bpls_i=tran_bpls_i.loc[tran_bpls_i['sma']*au>(2*tran_bpls_i['A_Rs']*Rsun)]
+        
         #combined mag & RMS with target star fluxes:
         tran_bpls_i['XAB_Pmag']=-2.512*np.log10(np.power(2.512,-1*stars.loc[tran_bpls_i['blend_parent'],'Pmag'].values)+\
                                                np.power(2.512,-1*tran_bpls_i['A_Pmag'].values))
