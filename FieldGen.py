@@ -255,6 +255,54 @@ def FieldGen(hemisphere='North',N_fields=1,outfileloc='/data/PLATO/Sims',
                             field_file_loc,num_quarts)
     #imports() this was just to generate requirements
 
+def ReRunPlatoSim3Gen(folder):
+    finalfieldstars=pd.DataFrame.from_csv(glob.glob(os.path.join(folder,"*_final_fieldcat.csv"))[0])
+    print(finalfieldstars.loc[:,['scope_cen_ra','scope_cen_dec','field_cen_ra','field_cen_dec']])
+    
+    Qs=np.unique(np.array([pyfile[pyfile.find("Q")+1] for pyfile in glob.glob(os.path.join(folder,"*_run.py"))]))
+    print("Qs:",Qs)
+    num_quarts=len(Qs)
+    
+    pyfile0=glob.glob(os.path.join(folder,"*_run.py"))[0].split('/')[-1]
+    string_init=pyfile0[:pyfile0.find("Q")-1]
+    
+    SavePlatosim3Python(string_init, 
+                        [np.nanmedian(finalfieldstars['scope_cen_ra']), 
+                         np.nanmedian(finalfieldstars['scope_cen_dec'])], 
+                        [np.nanmedian(finalfieldstars['field_cen_ra']),
+                         np.nanmedian(finalfieldstars['field_cen_dec'])],
+                        folder,num_quarts)
+'''
+def ReRunPlatoSim3Gen(folder,hemisphere=None,fieldid=None,ext=None,num_quarts=None):
+    if hemisphere is None:
+        hemisphere=folder.split('/')[-1].split('_')[-1]
+    if fieldid is None:
+        fieldid=int(folder.split('/')[-1][:2])
+    if ext is None:
+        ext=folder.split('/')[-1].split('_')[0][2:]
+    if num_quarts is None:
+        Qs=np.unique(np.array([pyfile[pyfile.find(Q)+1] for pyfile in glob.glob(path.join(folder,"*_run.py"))]))
+        print("Qs:",Qs)
+        num_quarts=len(Qs)
+    
+    if hemisphere[0]=='S':
+        #SOUTH
+        scope_cen=SkyCoord(253*u.deg, -30*u.deg,frame='galactic')#.transform_to(ICRS)
+    else:
+        scope_cen=SkyCoord(65*u.deg, 30*u.deg,frame='galactic')#.transform_to(ICRS)
+
+    finalfieldstars=pd.DataFrame.from_csv(path.join(folder,str(fieldid).zfill(2)+ext+"_final_fieldcat.csv"))
+    
+                                          
+    
+    SavePlatosim3Python(str(fieldid).zfill(2)+ext, 
+                        [scope_cen_radec.ra.value, scope_cen_radec.dec.value], 
+                        [np.median(finalfieldstars['field_cen_ra']),
+                         np.median(finalfieldstars['field_cen_dec'])],
+                        field_file_loc,num_quarts)
+
+'''
+
 def StellarStuff(allfieldstars):
     #Initialising LDs and GDs (sorting by FeH)
     print('getting LDs and GDs')

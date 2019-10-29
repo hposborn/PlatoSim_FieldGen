@@ -33,6 +33,7 @@ numRowsSubField = 100                    # Number of rows in the modelled sub-fi
 # towards the Sun.
 
 # Select which camera from the arguments with which the script is called
+Quarter_adj={quart}-1
 
 outputDir=os.path.dirname(os.path.abspath(__file__))#Previously, this was hardcoded as: "{outputloc}"
 #inputFile   = os.path.join(outputDir,"{fieldID}_Q{quart}_group{group}_camera{scope}_run.yaml")
@@ -54,7 +55,7 @@ sim["Sky/VariableSourceList"] = os.path.join(outputDir,"{fieldID}_Q{quart}_varca
 sim["ObservingParameters/StarCatalogFile"] =  os.path.join(outputDir,"{fieldID}_starcat.txt")
 
 # Set the simulation parameters that are the same for any quarter and for any telescope
-
+sim["ObservingParameters/ExposureTime"]= 21
 sim["ObservingParameters/RApointing"]  = np.rad2deg(raPlatform)
 sim["ObservingParameters/DecPointing"] = np.rad2deg(decPlatform)
 sim["ObservingParameters/Fluxm0"]      = 1.00179e8   # Photon flux of a V=0 G2V-star [phot/s/m^2/nm]
@@ -66,9 +67,11 @@ sim["Sky/IncludeCosmicsInSubField"]    = "no"              # Whether or not to i
 sim["Sky/IncludeCosmicsInSmearingMap"] = "yes"             # Whether or not to include cosmics in the overscan map
 sim["Sky/IncludeCosmicsInBiasMap"]     = "yes"             # Whether or not to include cosmics in the prescan map
 sim["Sky/Cosmics/CosmicHitRate"]       = 10              # Cosmic hit rate [events / cm^2 / s]
+
+'''
 sim["Sky/Cosmics/TrailLength"]         = [0, 15]         # Intervalof the length of the cosmic trails [pixels]
 sim["Sky/Cosmics/Intensity"]           = [2000, 40000]   # Interval of the total number of e- in a cosmic hit [e-]
-
+'''
 
 sim["Platform/SolarPanelOrientation"]  = math.fmod(Quarter_adj * 90., 360.)         # 0, 90, 180, and 270 degrees for Q1, Q2, Q3, and Q4
 sim["Platform/UseJitter"]              = "yes"             # yes or no. If no, ignore everything below.
@@ -81,6 +84,7 @@ sim["Platform/JitterFileName"]         = "inputfiles/PlatoJitter_OHB.txt"
 
 
 sim["Telescope/GroupID"]               = {group}        # There are four camera groups: 1, 2, 3, 4, Fast, Custom
+'''
 sim["Telescope/AzimuthAngle"]          = 0.0            # Azimuth angle of telescope on the platform [deg]  - used when GroupID = Custom
 sim["Telescope/TiltAngle"]             = 0.0            # Tilt angle of the telescope on the platform [deg] - used when GroupID = Custom
 sim["Telescope/LightCollectingArea"]   = 113.1            # Effective area of 1 telescope [cm^2]
@@ -116,28 +120,28 @@ sim["Camera/FieldDistortion/InverseCoefficientsFromFile"] = "inputfiles/distorti
 sim["PSF/Model"]                        = "AnalyticNonGaussian" # PSF model: MappedGaussian, MappedFromFile, AnalyticGaussian, AnalyticNonGaussian
                                   
     # Generate the PSF from a fixed 2D Gaussian function
-sim["PSF/Model/MappedGaussian/Sigma"]   = 0.639           # Standard deviation of Gaussian PSF [pix]
-sim["PSF/Model/MappedGaussian/NumberOfPixels"] = 8               # The number of pixels in the field for which the PSF is generated
-sim["PSF/Model/MappedGaussian/ChargeDiffusionStrength"] = 0.2             # Charge diffusion strength (width of the Gaussian diffusion kernel) [pixels]
-sim["PSF/Model/MappedGaussian/IncludeChargeDiffusion"] = yes              # Include charge diffusion [yes or no]
-sim["PSF/Model/MappedGaussian/IncludeJitterSmoothing"] = yes              # Include jitter smoothing [yes or no]
-sim["PSF/Model/MappedFromFile/Filename"] = "inputfiles/psf.hdf5"
-sim["PSF/Model/MappedFromFile/DistanceToOA"] = -1               # The angular distance to the optical axis. -1 to auto-compute.               [deg]
-sim["PSF/Model/MappedFromFile/RotationAngle"] = -1               # PSF rotation angle w.r.t the x-axis of the focal plane. -1 to auto-compute. [deg]
-sim["PSF/Model/MappedFromFile/NumberOfPixels"] = 8               # The number of pixels in the field for which the PSF is generated
-sim["PSF/Model/MappedFromFile/ChargeDiffusionStrength"] = 0.2             # Charge diffusion strength (width of the Gaussian diffusion kernel) [pixels]
-sim["PSF/Model/MappedFromFile/IncludeChargeDiffusion"] = "no"              # Include charge diffusion [yes or no]
-sim["PSF/Model/MappedFromFile/IncludeJitterSmoothing"] = "no"              # Include jitter smoothing [yes or no]
-sim["PSF/Model/AnalyticGaussian/Sigma00"] = 1.0             # Stdev of Gaussian PSF in x- and y-direction at the optical axis      [pix]
-sim["PSF/Model/AnalyticGaussian/SigmaX18"] = 5.0             # Stdev of Gaussian PSF in x-direction at 18 deg from the optical axis [pix]
-sim["PSF/Model/AnalyticGaussian/SigmaY18"] = 2.0             # Stdev of Gaussian PSF in y-direction at 18 deg from the optical axis [pix]
-sim["PSF/Model/AnalyticNonGaussian/ParameterFileName"] = "inputfiles/psfallv3.txt"
-sim["PSF/Model/AnalyticNonGaussian/ChargeDiffusionStrength"] = 0.2             # Charge diffusion strength (width of the Gaussian diffusion kernel) [pixels]
-sim["PSF/Model/AnalyticNonGaussian/IncludeChargeDiffusion"] = "yes"             # Include charge diffusion [yes or no]
+sim["PSF/MappedGaussian/Sigma"]   = 0.639           # Standard deviation of Gaussian PSF [pix]
+sim["PSF/MappedGaussian/NumberOfPixels"] = 8               # The number of pixels in the field for which the PSF is generated
+sim["PSF/MappedGaussian/ChargeDiffusionStrength"] = 0.2             # Charge diffusion strength (width of the Gaussian diffusion kernel) [pixels]
+sim["PSF/MappedGaussian/IncludeChargeDiffusion"] = "yes"            # Include charge diffusion [yes or no]
+sim["PSF/MappedGaussian/IncludeJitterSmoothing"] = "yes"            # Include jitter smoothing [yes or no]
+sim["PSF/MappedFromFile/Filename"] = "inputfiles/psf.hdf5"
+sim["PSF/MappedFromFile/DistanceToOA"] = -1               # The angular distance to the optical axis. -1 to auto-compute.               [deg]
+sim["PSF/MappedFromFile/RotationAngle"] = -1               # PSF rotation angle w.r.t the x-axis of the focal plane. -1 to auto-compute. [deg]
+sim["PSF/MappedFromFile/NumberOfPixels"] = 8               # The number of pixels in the field for which the PSF is generated
+sim["PSF/MappedFromFile/ChargeDiffusionStrength"] = 0.2             # Charge diffusion strength (width of the Gaussian diffusion kernel) [pixels]
+sim["PSF/MappedFromFile/IncludeChargeDiffusion"] = "no"              # Include charge diffusion [yes or no]
+sim["PSF/MappedFromFile/IncludeJitterSmoothing"] = "no"              # Include jitter smoothing [yes or no]
+sim["PSF/AnalyticGaussian/Sigma00"] = 1.0             # Stdev of Gaussian PSF in x- and y-direction at the optical axis      [pix]
+sim["PSF/AnalyticGaussian/SigmaX18"] = 5.0             # Stdev of Gaussian PSF in x-direction at 18 deg from the optical axis [pix]
+sim["PSF/AnalyticGaussian/SigmaY18"] = 2.0             # Stdev of Gaussian PSF in y-direction at 18 deg from the optical axis [pix]
+sim["PSF/AnalyticNonGaussian/ParameterFileName"] = "inputfiles/psfallv3.txt"
+sim["PSF/AnalyticNonGaussian/ChargeDiffusionStrength"] = 0.2             # Charge diffusion strength (width of the Gaussian diffusion kernel) [pixels]
+sim["PSF/AnalyticNonGaussian/IncludeChargeDiffusion"] = "yes"             # Include charge diffusion [yes or no]
 # Width of the analytic PSF, equal to sigma for a Gaussian PSF [pix]
-sim["PSF/Model/AnalyticNonGaussian/Sigma/Source"] = "ConstantValue"   # Either ConstantValue (constant in time) or FromFile (time dependent)
-sim["PSF/Model/AnalyticNonGaussian/Sigma/ConstantValue"] = 0.5             # Used in case Source is ConstantValue  [pix]
-sim["PSF/Model/AnalyticNonGaussian/Sigma/FromFile"] = "inputfiles/sigmaPSF.txt" # Used in case Source is FromFile: time [s] & sigma_PSF [pix]
+sim["PSF/AnalyticNonGaussian/Sigma/Source"] = "ConstantValue"   # Either ConstantValue (constant in time) or FromFile (time dependent)
+sim["PSF/AnalyticNonGaussian/Sigma/ConstantValue"] = 0.5             # Used in case Source is ConstantValue  [pix]
+sim["PSF/AnalyticNonGaussian/Sigma/FromFile"] = "inputfiles/sigmaPSF.txt" # Used in case Source is FromFile: time [s] & sigma_PSF [pix]
 
 sim["FEE/NominalOperatingTemperature"]  = 210.15          # Nominal operating temperature of the FEE [K]
 sim["FEE/Temperature"]                  = "Nominal"         # Temperature fixed at the nominal operating temperature
@@ -152,13 +156,13 @@ sim["FEE/ElectronicOffset/Stability"]   = 1               # Offset stability [AD
 
 sim["CCD/Position"]                     = 1               # one of [1, 2, 3, 4, Custom]
                                                           # (use Custom to specify the CCD position parameters yourself
-'''#Following: only for custom CCD
+#Following: only for custom CCD
 sim["CCD/OriginOffsetX"]=                  0               # X Offset of CCD origin from center of focal plane [mm]  - use when CCDPosition = Custom
 sim["CCD/OriginOffsetY"]=                  0               # Y Offset of CCD origin from center of focal plane [mm]  - use when CCDPosition = Custom
 sim["CCD/Orientation"]=                    0               # Orientation of CCD w.r.t. focal plane orientation [deg] - use when CCDPosition = Custom
 sim["CCD/NumColumns"]=                     4510            # Number of columns on the CCD [pixels]                   - use when CCDPosition = Custom
 sim["CCD/NumRows"]=                        4510            # Number of rows on the CCD [pixels] (including non-exposed ones) - use when CCDPosition = Custom
-'''
+
 sim["CCD/FirstRowExposed"]=                0               # The index of the first row that is exposed to light [pixels]
 sim["CCD/PixelSize"]=                      18              # [micron]
 # Brighter-fatter effect
@@ -221,7 +225,7 @@ sim["CCD/IncludeFullWellSaturation"]=      "yes"             # Whether or not fu
 sim["CCD/IncludeDigitalSaturation"]=       "yes"             # Whether or not digital saturation should be applied
 sim["CCD/IncludeQuantisation"]=            "yes"             # Whether or not to include quantisation
 
-'''
+
 #SubField stuff. Masked because we're using setSubfieldAroundCoordinates
 sim["SubField/ZeroPointRow"]=              0               # Row of the (0,0) pixel of the subfield [pixels]
 sim["SubField/ZeroPointColumn"]=           0               # Column of the (0,0) pixel of the subfield [pixels]
@@ -231,23 +235,38 @@ sim["SubField/NumBiasPrescanRows"]=        30              # Nr of rows of the p
 sim["SubField/NumBiasPrescanColumns"]=     30              # Nr of columns of the prescan strip to determine the bias [pixels]
 sim["SubField/NumSmearingOverscanRows"]=   30              # Nr of rows of the overscan strip to determine the smearing [pixels]
 sim["SubField/SubPixels"]=                 8               # (Sqrt of) nr of subpixels per CCD pixel. Should be 2^n <= 128.
+
+
+
+# Four groups of six camera's with their azimuth and tilt as specified
+                                                                       # The fifth value is for the Fast Camera's
+sim["CCD/CameraGroups/AzimuthAngle"]=      [45.0, 135.0, -135.0, -45.0, 0.0] # Azimuth angle of telescope on the platform [deg]
+sim["CCD/CameraGroups/TiltAngle"]=         [9.2, 9.2, 9.2, 9.2, 0.0]         # Tilt angle of the telescope on the platform [deg]
+
+
+sim["CCDPositions/OriginOffsetX"]=         [-1.3, -1.3, -1.3, -1.3]       # X Offset of CCD origin from center of focal plane [mm]
+sim["CCDPositions/OriginOffsetY"]=         [82.48, 82.48, 82.48, 82.48]   # Y Offset of CCD origin from center of focal plane [mm]
+sim["CCDPositions/Orientation"]=           [0, 90, 180, 270]              # Orientation of CCD w.r.t. focal plane orientation, counter-clockwise [deg]
+sim["CCDPositions/NumColumns"]=            [4510, 4510, 4510, 4510]       # Number of columns on the CCD [pixels]
+sim["CCDPositions/NumRows"]=               [4510, 4510, 4510, 4510]       # Number of rows on the CCD [pixels] (including non-exposed ones)
+sim["CCDPositions/FirstRowForNormalCamera"]=[0, 0, 0, 0]                   # The complete CCDs are active/illuminated for the Normal Camera's
+sim["CCDPositions/FirstRowForFastCamera"]= [2255, 2255, 2255, 2255]       # Only the upper half of the CCDs is active/illuminated for the Fast Camera's
 '''
 
-sim["SubField/NumColumns"] = numColumnsSubField
-sim["SubField/NumRows"] = numRowsSubField
+sim["SubField/NumColumns"]                 = numColumnsSubField
+sim["SubField/NumRows"]                    = numRowsSubField
 
 # Set the telescope group ID, this is needed for the subfield calculations later on.
 
-sim["Telescope/GroupID"] = {group}
+sim["Telescope/GroupID"]                   = {group}
 
 # Set the quarter specific parameters
-Quarter_adj={quart}-1
-sim["RandomSeeds/JitterSeed"]       = 2033429158 + 100 * Quarter_adj
+sim["RandomSeeds/JitterSeed"]              = 2033429158 + 100 * Quarter_adj
 
-sim["ObservingParameters/ExposureTime"]=21
 readoutTime, dummy = sim.getReadoutTime()
+#print("readoutTime",readoutTime," expTime",21, sim["ObservingParameters/ExposureTime"] )
 numExposures = int(365.25/4*86400/(sim["ObservingParameters/ExposureTime"] + readoutTime))
-sim["ObservingParameters/NumExposures"] = numExposures
+sim["ObservingParameters/NumExposures"]    = numExposures
 sim["ObservingParameters/BeginExposureNr"] = Quarter_adj * numExposures
 
 # Attempt to set a subfield around the specified coordinates on one of the 4 CCDs of the telescope.
@@ -263,12 +282,12 @@ if isSuccessful:
     
     randomSeedOffset = 1000 * 8 * Quarter_adj +  10 * 4 * {group} + {scope}
     
-    sim["RandomSeeds/ReadOutNoiseSeed"] = 1424949740 + randomSeedOffset
-    sim["RandomSeeds/PhotonNoiseSeed"]  = 1533320336 + randomSeedOffset
-    sim["RandomSeeds/FlatFieldSeed"]    = 1633320381 + randomSeedOffset
-    sim["RandomSeeds/CosmicSeed"]       = 1234567457 + randomSeedOffset
-    sim["RandomSeeds/DriftSeed"]        = 1733429158 + randomSeedOffset
-    sim["RandomSeeds/DarkSignalSeed"]   = 1803517191 + randomSeedOffset
+    sim["RandomSeeds/ReadOutNoiseSeed"]    = 1424949740 + randomSeedOffset
+    sim["RandomSeeds/PhotonNoiseSeed"]     = 1533320336 + randomSeedOffset
+    sim["RandomSeeds/FlatFieldSeed"]       = 1633320381 + randomSeedOffset
+    sim["RandomSeeds/CosmicSeed"]          = 1234567457 + randomSeedOffset
+    sim["RandomSeeds/DriftSeed"]           = 1733429158 + randomSeedOffset
+    sim["RandomSeeds/DarkSignalSeed"]      = 1803517191 + randomSeedOffset
     # Run the PlatoSim simulator
     # logLevel can 1 (least verbose) to 3 (most verbose)
     
@@ -286,7 +305,7 @@ if isSuccessful:
     #Running photometric pipeline:
     platophot.photometry(inputFilePath=os.path.join(outputDir,outputFilePrefix+".hdf5"),
                         outputFilePath=os.path.join(outputDir,outputFilePrefix+"_extracted_photometry.hdf5"),
-                        targetIDs=list(targ_ids.astype(int).astype(str))
+                        targetIDs=list(targ_ids.astype(int).astype(str)) )
 
     #tar-zipping hdf5 imagette file:
     os.system("tar -zcf "+os.path.join(outputDir,outputFilePrefix+"_binned_imgts.tar.gz")+\
