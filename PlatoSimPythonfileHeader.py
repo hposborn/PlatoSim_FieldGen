@@ -315,7 +315,9 @@ if isSuccessful:
     #Running photometric pipeline:
     platophot.photometry(inputFilePath=os.path.join(outputDir,outputFilePrefix+".hdf5"),
                         outputFilePath=os.path.join(outputDir,outputFilePrefix+"_extracted_photometry.hdf5"),
-                        targetIDs=list(targ_ids.astype(int).astype(str)) )
+                        targetIDs=[np.string_(str(int(targ_ids[n]))) for n in range(len(targ_ids))]
+                        )
+                        #list(targ_ids.astype(int).astype(str)) )
 
     #tar-zipping hdf5 imagette file:
     os.system("tar -zcf "+os.path.join(outputDir,outputFilePrefix+"_binned_imgts.tar.gz")+\
