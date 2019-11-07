@@ -11,6 +11,7 @@
 import os
 import sys
 import math
+import pickle
 
 import numpy as np
 from simulation import Simulation
@@ -18,6 +19,7 @@ from referenceFrames import getCCDandPixelCoordinates
 from referenceFrames import platformToTelescopePointingCoordinates
 from referenceFrames import sunSkyCoordinatesAwayfromPlatformPointing
 from referenceFrames import CCD
+from PlatoSim_FieldGen.FieldGen import rebin_hdf5_file
  
 raPlatform  = np.deg2rad({raPlatform})           # Platform right ascension pointing coordinate
 decPlatform = np.deg2rad({decPlatform})           # Platform declination pointing coordinate
@@ -277,6 +279,7 @@ sim["ObservingParameters/BeginExposureNr"] = Quarter_adj * numExposures
 isSuccessful =  sim.setSubfieldAroundCoordinates(raCenter, decCenter, numColumnsSubField, numRowsSubField, normal=True)
 
 if isSuccessful:
+    
     # Make sure that the following random seeds differ for each telescope and for each quarter
     # We assume a maximum of 8 quarter and 4 camera groups
     
@@ -291,16 +294,23 @@ if isSuccessful:
     # Run the PlatoSim simulator
     # logLevel can 1 (least verbose) to 3 (most verbose)
     
-    simFile = sim.run(logLevel=2)
-        
-    targ_ids=rebin_hdf5_file(os.path.join(outputDir,outputFilePrefix+'.hdf5'),
+    if not os.path.exists(os.path.join(outputDir,outputFilePrefix+'.hdf5')):
+        simFile = sim.run(logLevel=2)
+    else:
+        print("simFile alrady exists")
+    if not os.path.exists(os.path.join(outputDir,outputFilePrefix+'_binned_imgts.hdf5')) or not os.path.exists(os.path.join(outputDir,outputFilePrefix+'list_targets.pickle')):
+        print("Binning PlatoSim3 output into imagettes")
+        targ_ids=rebin_hdf5_file(os.path.join(outputDir,outputFilePrefix+'.hdf5'),
                               starcatloc=os.path.join(outputDir,"{fieldID}_starcat.txt"),
                               injcatloc=os.path.join(outputDir,"{fieldID}_final_fieldcat.csv"))
-    
+        print(targ_ids[:5],type(targ_ids[0]))
+    else:
+        print("Loading target IDs from file")
+        #targ_ids=np.genfromtxt(os.path.join(outputDir,outputFilePrefix+"list_targets.txt"))
+        targ_ids=pickle.load(open(os.path.join(outputDir,outputFilePrefix+"list_targets.pickle"),"rb"))
+        print("targs",targ_ids[:5],type(targ_ids[0]))
     #Running photometric Extraction:
     import platophot
-    
-    #np.genfromtxt(os.path.join(outputDir,outputFilePrefix+"list_targets.txt"))
     
     #Running photometric pipeline:
     platophot.photometry(inputFilePath=os.path.join(outputDir,outputFilePrefix+".hdf5"),

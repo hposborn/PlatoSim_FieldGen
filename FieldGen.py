@@ -10,10 +10,24 @@
 #  - if prob < 50% have blends
 import numpy as np
 import pandas as pd
-from LcGen import *
-from GenLcsForPlatoSim3 import *
+
+try:
+    from .LcGen import *
+    from .GenLcsForPlatoSim3 import *
+except:
+    try:
+        from PlatoSim_FieldGen.LcGen import *
+        from PlatoSim_FieldGen.GenLcsForPlatoSim3 import *
+    except:
+        try:
+            from LcGen import *
+            from GenLcsForPlatoSim3 import *
+        except:
+            raise Exception()
+
 import traceback
 import contextlib
+import pickle
 
 #Make field
 
@@ -1227,6 +1241,20 @@ def GetVar(Age,Ms,Teff,Rs,time):
 
     return varbly, qpcols
 
+def mask_nd(x, m):
+    '''
+    Mask a 2D array and preserve the
+    dimension on the resulting array
+    ----------
+    x: np.array
+       2D array on which to apply a mask
+    m: np.array
+        2D boolean mask 
+    '''
+    take_0 = m.sum(axis=0)
+    take_1 = m.sum(axis=1)
+    return x[m].reshape(np.max(take_0),np.max(take_1))
+
 
 def rebin_hdf5_file(hdf5file,starcatloc,injcatloc,bin_factor=24):
     import h5py
@@ -1237,7 +1265,7 @@ def rebin_hdf5_file(hdf5file,starcatloc,injcatloc,bin_factor=24):
     #Access time and binning
     t=platosim_output.root.StarPositions.Time[:]
     cad=np.nanmedian(np.diff(platosim_output.root.StarPositions.Time[:]))
-    idxarr=np.digitize(t,np.arange(t[0],t[-1]+0.1*cad,n_per_bin*cad))
+    idxarr=np.digitize(t,np.arange(t[0],t[-1]+0.1*cad,bin_factor*cad))
     newt=np.array([np.average(t[idxarr==n]) for n in np.unique(idxarr)])
     imgids=np.array(list(platosim_output.root.Images._v_children.keys()))
     
@@ -1269,7 +1297,8 @@ def rebin_hdf5_file(hdf5file,starcatloc,injcatloc,bin_factor=24):
     targets=targets.loc[(targets['colPix_subField']>1)*(targets['colPix_subField']<99)*(targets['rowPix_subField']>1)*(targets['rowPix_subField']<99)]
 
     #Saving list of targets for photometric extraction:
-    np.savetxt(hdf5file.replace('.hdf5','list_targets.txt'),targets['hdf5_name'].values)
+    pickle.dump(targets['hdf5_name'].values,open(hdf5file.replace('.hdf5','list_targets.pickle'),'wb'))
+    #np.savetxt(hdf5file.replace('.hdf5','list_targets.txt'),targets['hdf5_name'].values)
 
     #Open new hdf5 file and init data
     if os.path.exists(hdf5file.replace('.hdf5','_binned_imgts.hdf5')):

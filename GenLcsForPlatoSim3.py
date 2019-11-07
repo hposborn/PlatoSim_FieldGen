@@ -31,7 +31,16 @@ warnings.simplefilter(action='ignore', category=UserWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=RuntimeWarning)
 
-from LcGen import *
+try:
+    from .LcGen import *
+except:
+    try:
+        from PlatoSim_FieldGen.LcGen import *
+    except:
+        try:
+            from LcGen import *
+        except:
+            raise Exception()
 
 import astropy.coordinates
 from astropy.coordinates import SkyCoord, SkyOffsetFrame, ICRS
@@ -1015,10 +1024,17 @@ def SavePlatosim3Python(fieldID, scoperadec, fieldradec, field_file_loc, num_qua
                                                                 varcat = os.path.join(field_file_loc,fieldID+'_Q'+str(quart)+'_varcat.txt'),
                                                                 outputloc=field_file_loc)
                                    )
-                     '''
+    '''
+    #linking the inputfiles directory to the eventual file in order to import default simulations + scripts               
     if not os.path.exists(field_file_loc+'/inputfiles'):
         print('RUNNING: \"ln -s '+os.getenv("PLATO_PROJECT_HOME")+"/inputfiles "+field_file_loc+'\"')
         os.system('ln -s '+os.getenv("PLATO_PROJECT_HOME")+"/inputfiles "+field_file_loc)
+    
+    #linking the FieldGen directory to the eventual file in order to import the rebin_hdf5 function
+    if not os.path.exists(field_file_loc+'/PlatoSim_FieldGen'):
+        dirname, filename = os.path.split(os.path.abspath(__file__))
+        print('RUNNING: \"ln -s '+dirname+" "+field_file_loc+'\"')
+        os.system('ln -s '+dirname+" "+field_file_loc)
 
     #["group" , "scope", "quart", "raPlatform", "decPlatform", "raField", "decField"]
 
