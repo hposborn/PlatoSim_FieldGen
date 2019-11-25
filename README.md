@@ -42,4 +42,4 @@ A field of star positions is generated using astropy and PlatoSim's in house fun
 
 For each of the target types, a Besancon catalogue of stars is used to choose parent stars, a planet or binary population is injected (using modified occurrence rates) and those targets with significant transiting signals are chosen from to form the input population. Variability and contaminant stars (again from Besancon stellar catalogues) are then generated. Finally lightcurves are generated for each target and PlatoSim3-compatible stellar catalogues created. A PlatoSim3 runfile is finally made which will enable the PlatoSim3 field creation, imagette extraction and binning (to 10min), and photometric extraction of lightcurves for each input target star.
 
-For full documentation see [this document](doc.pdf) or [this flowchart](flowchart.pdf).
+For full documentation see [this document](https://github.com/hposborn/PlatoSim_FieldGen-Document/blob/master/main.pdf) or [this flowchart](flowchart.pdf).

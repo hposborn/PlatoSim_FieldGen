@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*- 
 """
 #Usage: simQuarter.py <camaraGroupNr> <cameraNr> <quarterNr>
 #
@@ -182,8 +184,8 @@ sim["CCD/FullWellSaturation"]=             900000          # [e-/pixel]
 sim["CCD/DigitalSaturation"]=              65535           # E.g. 16 bit [ADU/pixel]
 sim["CCD/ReadoutNoise"]=                   38.7            # [e-/pixel]
 sim["CCD/SerialTransferTime"]=             340             # Time to shift the content of the readout register by one pixel [ns]
-sim["CCD/ParallelTransferTime"]=           110             # Time to shift the charges one row down in case the readout register will be read out [µs]
-sim["CCD/ParallelTransferTimeFast"]=       90              # Time to shift the charges one row down in case the readout register will not be read out [µs]
+sim["CCD/ParallelTransferTime"]=           110             # Time to shift the charges one row down in case the readout register will be read out [microsec]
+sim["CCD/ParallelTransferTimeFast"]=       90              # Time to shift the charges one row down in case the readout register will not be read out [microsec]
 sim["CCD/ReadoutMode/ReadoutMode"]=        "Nominal"         # Nominal (normal camera"]=full frame; fast camera"]=frame transfer) / Partial (read contiguous block of entire rows)
 sim["CCD/ReadoutMode/Partial/FirstRowReadout"]=          0               # First row that will be read out by the FEE in partial-readout mode
 sim["CCD/ReadoutMode/Partial/NumRowsReadout"]=           4510            # Number of rows that will be read out by the FEE, in partial-readout mode
