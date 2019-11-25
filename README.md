@@ -18,7 +18,7 @@ There may be some special treatment here (e.g. to install the development versio
 
 
 ## Using FieldGen
-Effectively, FieldGen.py can be run like any python script, or installed and individual parts run separately. 
+Effectively, FieldGen.py can be run like any python script, or imported and individual parts run separately. 
 
 In it's default mode, it generates randomly-placed 100x100 pixel fields in PLATO's north or southern viewing zones, each with stars set at 7-pixel increments, and with a set fraction of system types across the target stars (PLs:32%, EBs:7%, BEBs:13%, BPLs:7%), plus a set variability fractions (50%), and fraction of stars with contaminants (50%).
 
