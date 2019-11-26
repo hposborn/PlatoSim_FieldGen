@@ -158,15 +158,16 @@ class JobError(Exception):
     def __str__(self):
         return "Error when "+self.when+" : "+str(self.status)+" "+self.explain
 
-    
+
 def GetBesanconCat(hemis,dtype,n,outdir='BesanconModels/'):
-    print('|'+hemis+'|','|'+dtype+'|',n)
+    print("Searching ",outdir,'for Besancon files |'+hemis+'|','|'+dtype+'|',n)
     if not os.path.isdir(outdir):
+        print("Not found in ",outdir," so creating a new folder")
         os.system('mkdir '+outdir)
     if len(glob.glob(outdir+hemis+'_'+dtype+'_'+str(n)+'_dat*'))==0:
         user = input("Besancon Username")
         passwd = input("Besancon Password")
-        
+
         if not os.path.isdir(outdir):
             os.system('mkdir '+outdir)
 
@@ -313,7 +314,7 @@ def parseBes(file):
     #'Radius', '[M/H]', '[a/Fe]', 'longitude', 'latitude', 'RAJ2000',
     #'DECJ2000', 'Dist', 'x_Gal', 'y_Gal', 'z_Gal', 'Av'
     dat=dat.rename(columns={'Dist':'dist','Radius':'Rs','[M/H]':'FeH','Mass':'Ms'})
-    
+
     return dat
 
 
@@ -330,7 +331,7 @@ def getPmagRms(Pmag,Nscopes,poly=None):
     if poly is None:
         Pmags=np.array([7.66,8.16,8.66,9.16,9.66,10.16,10.66,11.16,11.66,12.16,12.66])
         noise_24=np.array([9.8,12.3,15.5,19.5,24.6,31.0,39.0,49.1,61.8,77.7,97.9])
-    
+
         poly=np.polyfit(Pmags,np.log10(noise_24),2)
     Pnoise_24=lambda Pmag: np.polyval(poly,Pmag)
     return np.power(10,Pnoise_24(Pmag)*(Nscopes/24)**0.5),poly
@@ -347,7 +348,7 @@ def getVmagRms(V,Nscopes,poly=None):
 def assembleP5_new(hemisphere,npart, nmult=1,ext='',mag='Pmag',peturb_cat=False,outdir='/home/hosborn/PLATO/BesanconModels2'):
     #Assembles PLATO sample
     # hemisphere  - north or south
-    # npart - number part between 0 and 9 for each of the 10 split Besancon files 
+    # npart - number part between 0 and 9 for each of the 10 split Besancon files
     # nmult = multiplication factor to emulate, eg, 10x the number of stars for statistical purposes.
     #
     T=2*365.25
@@ -528,7 +529,7 @@ def Blends_np_PLATO(wide,deep,mag='Pmag',deltamag_max_thresh=10,deltamag_min_thr
         new_stars=new_stars.drop(new_stars.loc[new_stars['deltamag']<deltamag_min_thresh].index.values)
 
         new_stars['sep']=np.sqrt(np.random.random(new_stars.shape[0]))*(2*star[1]['ap_radius']) #distances are sqrt(random)
-                
+
         #adding info - that these stars are blends attached to the parent star
         new_stars['type']=np.tile('blend',new_stars.shape[0])
 
@@ -540,7 +541,7 @@ def Blends_np_PLATO(wide,deep,mag='Pmag',deltamag_max_thresh=10,deltamag_min_thr
         new_stars['orb_parent']=new_stars.index.values
         new_stars['latitude']=star[1]['latitude']
         new_stars['longitude']=star[1]['longitude']
-        
+
         new_stars['frac_blend_in_aperture']=stats.norm.cdf(new_stars['sep']-star[1]['ap_radius'],0,0.2*15)
 
         stars_and_blends=stars_and_blends.append(new_stars,sort=False)
@@ -633,7 +634,7 @@ def Add_angles(binaries,all_stars,mag='Pmag'):
     #Compute angle to target
     all_stars['angle_to_target']=np.tile(np.nan,all_stars.shape[0])
     all_stars['angle_to_parent']=np.random.uniform(0,np.pi*2,len(all_stars))
-    
+
     #latiutde and longitude from parent, separation and random angle:
     all_stars['x_to_target']=np.tile(np.nan,all_stars.shape[0])
     all_stars['y_to_target']=np.tile(np.nan,all_stars.shape[0])
@@ -645,13 +646,13 @@ def Add_angles(binaries,all_stars,mag='Pmag'):
     #Computing x and y for first order binaries
     firstorders=(all_stars.type=='blend')+(all_stars.type=='target_b')
     all_stars.loc[firstorders,'angle_to_target']=all_stars['angle_to_parent']
-        
+
     all_stars.loc[firstorders,'x_to_target'] = all_stars.loc[firstorders,'sep']*np.sin(all_stars.loc[firstorders,'angle_to_target'])
     all_stars.loc[firstorders,'x_to_parent']=all_stars.loc[firstorders,'x_to_target']
 
     all_stars.loc[firstorders,'y_to_target'] = all_stars.loc[firstorders,'sep']*np.cos(all_stars.loc[firstorders,'angle_to_target'])
     all_stars.loc[firstorders,'y_to_parent']=all_stars.loc[firstorders,'y_to_target']
-    
+
     all_stars.loc[firstorders,'latitude']=all_stars.loc[firstorders,'latitude'].values+\
                                           all_stars.loc[firstorders,'x_to_target'].values/3600
     all_stars.loc[firstorders,'longitude']=all_stars.loc[firstorders,'longitude'].values+\
@@ -704,7 +705,7 @@ def IsochronesMagic_Simple(dfstars,mag='Pmag'):
     #mist = MIST_Isochrone()
     dart= Dartmouth_Isochrone()
     dfstars['Ms']=np.clip(dfstars['Ms'],0.101,3.58)
-    
+
     maxagebound=np.array([[-1.0,  1.01590604e+01],
                            [-9.46375839e-01,  1.01731544e+01],
                            [-8.93355705e-01,  1.01731544e+01],
@@ -773,11 +774,11 @@ def IsochronesMagic_Simple(dfstars,mag='Pmag'):
     #print(np.sum(dfstars['logage'].values<minage(np.log10(dfstars['Ms'].values))),'ages too small and',
     #      np.sum(dfstars['logage'].values>maxage(np.log10(dfstars['Ms'].values))),'ages too big')
     dfstars.loc[(np.isnan(dfstars['logage'].values))&(~np.isnan(dfstars['Ms'].values)),'logage']=0.5*(minage(np.log10(dfstars.loc[(np.isnan(dfstars['logage'].values))&(~np.isnan(dfstars['Ms'].values)),'Ms']))+maxage(np.log10(dfstars.loc[(np.isnan(dfstars['logage'].values))&(~np.isnan(dfstars['Ms'].values)),'Ms'])))
-    
+
     dfnans=np.isnan(np.sum(dfstars[['Ms','logage','FeH','dist']].values,axis=1))
 
     dfstars.loc[(~dfnans)&(dfstars['logage'].values<minage(np.log10(dfstars['Ms'].values))),'logage']=minage(np.log10(dfstars.loc[(~dfnans)&(dfstars['logage'].values<minage(np.log10(dfstars['Ms'].values))),'Ms'].values))+0.15
-    dfstars.loc[(~dfnans)&(dfstars['logage'].values>maxage(np.log10(dfstars['Ms'].values))),'logage']=maxage(np.log10(dfstars.loc[(~dfnans)&(dfstars['logage'].values>maxage(np.log10(dfstars['Ms'].values))),'Ms'].values))-0.15    
+    dfstars.loc[(~dfnans)&(dfstars['logage'].values>maxage(np.log10(dfstars['Ms'].values))),'logage']=maxage(np.log10(dfstars.loc[(~dfnans)&(dfstars['logage'].values>maxage(np.log10(dfstars['Ms'].values))),'Ms'].values))-0.15
     #print(np.shape(dfnans),np.shape(dfstars[['Ms','logage','FeH','dist']].as_matrix()))
     df=dart.__call__(np.where(dfnans,0.0,dfstars['Ms'].values),
                      age=np.where(dfnans,0.0,dfstars['logage'].values),
@@ -956,7 +957,7 @@ def sort_systems(systems,stars,maxau=100):
     #stars.iloc[np.digitize(newstars.parent.values,stars.index.values),'Ms']
 
     systems['sma']=kepp2a(systems['P'].values,stars.loc[systems.A.values]['Ms'].values,stars.loc[systems.B.values]['Ms'].values)
-    
+
     #MinStableSMA from maximum of hill-sphere of secondary, or the sum of the primary and secondary radii
     systems['min_sma']=np.nanmax(np.column_stack((MinStableSMA(stars.loc[systems.A.values]['Ms'].values,
                                                             stars.loc[systems.B.values]['Ms'].values,
@@ -965,7 +966,7 @@ def sort_systems(systems,stars,maxau=100):
                                                                stars.loc[systems.B.values]['Rs'].values)
                                               ))
                               ,axis=1)
-                               
+
     systems['max_sma']=np.tile(maxau,systems.shape[0])
     systems['hillsph']=MaxStableSMA(stars.loc[systems['A'].values]['Ms'].values,stars.loc[systems['B'].values]['Ms'].values,systems['sma'].values)
 
@@ -1012,7 +1013,7 @@ def sort_systems(systems,stars,maxau=100):
     #Finding totally unstable systems. These will be dropped at the end.
     unstable=(systems.min_sma>systems.max_sma)+pd.isnull(systems['min_sma'])+pd.isnull(systems['max_sma'])
     lenunstables=np.sum(unstable)
-    
+
     #Re-sampling currently unstable systems uniformly between maximum and minimum:
     resampl=((systems.sma>systems.max_sma)|(systems.sma<systems.min_sma))*(~unstable)
     if np.sum(resampl)>0:
@@ -1023,7 +1024,7 @@ def sort_systems(systems,stars,maxau=100):
                                         stars.loc[systems.loc[resampl,'B'].values]['Ms'].values)
         #Multiple systems in need of resampling might a) take high-e values from long-P rendering their close proximity to other stars unstable still... and b) are more likely to circularise. So let's set e=0
         systems.loc[resampl,'ecc']=0.0
-        
+
     #When we do a planet-addition step, we need the stars to have min and max sma according to their nearest companions...
     systems['pl_hillsph_A']=MaxStableSMA(stars.loc[systems['A'].values]['Ms'].values,np.tile(0.001,systems.shape[0]),systems['sma'].values)
     systems['pl_hillsph_B']=MaxStableSMA(stars.loc[systems['B'].values]['Ms'].values,np.tile(0.001,systems.shape[0]),systems['sma'].values)
@@ -1163,8 +1164,8 @@ def get_multis_new(stars,mag='Pmag',maxau=100):
         newstars.loc[newstars['logage']<0.5]=1.001
         iso_df=IsochronesMagic_Simple(newstars,mag=mag)
         inflatedsystems=(iso_df['Rs']>1.1*newstars['Rs_parent'])+(iso_df['Pmag']<(newstars['Pmag_parent']-0.25))
-        #Some problem systems where binary is far far bigger than primary, or far brighter (ie becoming the primary)... 
-        #This happens because the Besancon models use a different/less generous isochrones relation. 
+        #Some problem systems where binary is far far bigger than primary, or far brighter (ie becoming the primary)...
+        #This happens because the Besancon models use a different/less generous isochrones relation.
         # Fixing for radius by subtracting 1 from the logage (ie logage of 9.7 -> 8.7)
         # And fixing for magnitude by multiplying distance by 1.2
         if np.sum(inflatedsystems)>0:
@@ -1172,7 +1173,7 @@ def get_multis_new(stars,mag='Pmag',maxau=100):
             newstars.loc[newstars['middle_aged']<0.5]=1.001
             newstars['middle_distance']=newstars['dist']*1.2
             iso_df.loc[inflatedsystems]=IsochronesMagic_Simple(newstars.loc[inflatedsystems].drop(columns=['logage','dist']).rename(columns={'middle_aged':'logage','middle_distance':'dist'}),mag=mag)
-            
+
         #We STILL have a problem... Instead let's fix the primary stars to their Isochrones-derived versions
         inflatedsystems=(iso_df['Rs']>1.05*newstars['Rs_parent'])+(iso_df['Pmag']<(newstars['Pmag_parent']-0.25))
         if np.sum(inflatedsystems)>0:
@@ -1215,7 +1216,7 @@ def get_multis_new(stars,mag='Pmag',maxau=100):
         allnewstars=allnewstars.append(newstars)
     #Some of the max_sma for planets is unstable, so set these to 0.0
     allnewstars.loc[allnewstars.max_sma.values<0,'max_sma']=0.0
-    
+
     #Now calculating observables (don't want to do this in the loop above - numpy is quicker!
     newsystems['perihel']=newsystems['sma']*(1-newsystems['ecc'])
     newsystems['aphel']=newsystems['sma']*(1+newsystems['ecc'])
@@ -1262,16 +1263,16 @@ def assemblePet(multfunc=None):
     #Getting occurrence rates and extending a bit:
     petigura=np.genfromtxt('tables/Petigura2017_ext_2.txt') #Getting petigura occurance rates from file
     #Cutting periods>500d
-    
+
     if multfunc is not None:
         #Multifunc is multiplicitive function in P and Rp to boost planet numbers:
         for p in range(1,len(petigura[0,:])-1):
             for r in range(1,len(petigura[:,0])):
                 petigura[r,p]*=multfunc(petigura[0,p],petigura[r,0])
-    
+
     petigura=petigura[:,:15]
     petigura[1:,-1]=np.zeros(len(petigura[1:,-1]))
-    
+
     return petigura
 
 
@@ -1282,12 +1283,12 @@ def GenPls(allstars,petigura):
     #Forcing positions where planets might be unstable to not spawn planets there by making random number 1.0
     np.sum(np.tile(allstars.max_per[:,np.newaxis]<petigura[0,2:],(11,1,1)).swapaxes(1,0))
     np.sum(np.tile(allstars.min_per[:,np.newaxis]>petigura[0,1:-1],(11,1,1)).swapaxes(1,0))
-    
+
     rands[np.tile(allstars.max_per[:,np.newaxis]<petigura[0,2:],(11,1,1)).swapaxes(1,0)]=1.0
     rands[np.tile(allstars.min_per[:,np.newaxis]>petigura[0,1:-1],(11,1,1)).swapaxes(1,0)]=1.0
 
     whr=np.where(rands<np.tile(petigura[1:-1,1:-1],(allstars.shape[0],1,1)))
-    
+
     tran_pls_i=pd.DataFrame()
 
     #A is direct parent
@@ -1316,7 +1317,7 @@ def GenPls(allstars,petigura):
             booltake[np.random.choice(len(solarsyst),size=limit_n_pls,replace=False)]=1.0 #choosing 8 from those available
             booltake=booltake.astype(bool)
             tran_pls_i=tran_pls_i.drop(solarsyst[~booltake]) #drop excess planets from full df
-            
+
             solarsyst=solarsyst[booltake] #remove excess planets from per-system list
         tran_pls_i.loc[solarsyst,'index_pl']=tran_pls_i.loc[solarsyst,'P'].argsort()
     #Making index "starname"+"_"+"planet number"
@@ -1473,7 +1474,7 @@ def get_albedo(teff):
     else:
         return a
 
-    
+
 
 ##################################################################
 #                                                                #
@@ -1489,7 +1490,7 @@ def GenLC(starA,starB,times,system=None,verbose=0,nodip=False):
     systcols=['P', 'T0', 'ecc', 'omega', 'incl', 'sep','min_sma', 'max_sma',
               'sma', 'bpri', 'bsec', 'Rratio', 'pri_ecl', 'sec_ecl','T0_sec']
 
-    
+
     if type(starA)==pd.DataFrame:
         starA=starA.iloc[0].copy()
     if type(starB)==pd.DataFrame:
@@ -1552,8 +1553,8 @@ def GenLC(starA,starB,times,system=None,verbose=0,nodip=False):
             arr=pd.Series()
 
             arr=TheoryDurationTau(arr, starA, starB, system)
-            
-            
+
+
             if system['sec_ecl']:
                 arr['T0_sec_obs']=FindT0sec(system['T0_sec'],system['P'], starA,starB, system)
             else:
@@ -1575,15 +1576,15 @@ def GenLC(starA,starB,times,system=None,verbose=0,nodip=False):
 
                 arr=ObsDurationTau(arr, starA,starB,system,lc[:len(xtra_t)])
                 lc=lc[len(xtra_t):]
-            
-            
+
+
 
         except:
             print("EB lc fails:")
             print('rad/sma',(starA.Rs*Rsun)/(system.sma*au),(starB.Rs*Rsun)/(system.sma*au),
                  'sbrat',(starB.Teff/starA.Teff)**4,'incl',system['incl']*180/np.pi,
                  'f3',1.0-(starA.prop_of_flux_in_ap+starB.prop_of_flux_in_ap),'t0',system.T0,
-                 'eccs',np.sqrt(system.ecc)*np.cos(system.omega),np.sqrt(system.ecc)*np.sin(system.omega), 
+                 'eccs',np.sqrt(system.ecc)*np.cos(system.omega),np.sqrt(system.ecc)*np.sin(system.omega),
                  'P and sma',system.P,(system.sma*au)/(starA.Rs*Rsun),'q',(starB.Ms*Msun)/(starA.Ms*Msun),
                  'LDs',[starA.LD_1,starA.LD_2], [starB.LD_1,starB.LD_2],starA.GD_1,starB.GD_1,
                  'albedos',starA.albedo, starB.albedo,'bfacs', starA.bfac,starB.bfac)
@@ -1591,13 +1592,13 @@ def GenLC(starA,starB,times,system=None,verbose=0,nodip=False):
             arr=pd.Series({'suceeds':False})
         print(arr)
         print(type(arr))
-        
+
         arr=arr.append(system)
         arr=arr.append(starB.rename(index={bcol:'B_'+bcol for bcol in starB.index}))
     arr=arr.append(starA.rename(index={bcol:'A_'+bcol for bcol in starA.index}))
     arr=arr[~arr.index.duplicated(keep='first')]
     return lc,arr
-                 
+
 def GetEllcLC(times,starA,starB,system=None,verbose=0):
     if system is None:
         #PLANET case
@@ -1605,7 +1606,7 @@ def GetEllcLC(times,starA,starB,system=None,verbose=0):
                     radius_1=(starA.Rs*Rsun)/(starB.sma*au), radius_2=(starB.Rp*Rearth)/(starB.sma*au),
                     sbratio=(starB.Teff/starA.Teff)**4, incl=starB['incl']*180/np.pi,
                     light_3=starA.prop_of_flux_in_ap**-1, t_zero=starB.T0, period=starB.P,a=(starB.sma*au)/(starA.Rs*Rsun),
-                    f_c=np.sqrt(starB.ecc)*np.cos(starB.omega), f_s=np.sqrt(starB.ecc)*np.sin(starB.omega), 
+                    f_c=np.sqrt(starB.ecc)*np.cos(starB.omega), f_s=np.sqrt(starB.ecc)*np.sin(starB.omega),
                     q=(starB.Mp*Mearth)/(starA.Ms*Msun),ldc_1=[starA.LD_1,starA.LD_2], ldc_2=[1.,0.],gdc_1=starA.GD_1,
                     gdc_2=0.0, heat_1=starA.albedo, heat_2=starB.albedo, lambda_1=None,ld_1="quad",
                     ld_2="quad",grid_1='sparse',grid_2='sparse',bfac_1=starA.bfac,bfac_2=starB.bfac,
@@ -1616,7 +1617,7 @@ def GetEllcLC(times,starA,starB,system=None,verbose=0):
                     radius_1=(starA.Rs*Rsun)/(system.sma*au), radius_2=(starB.Rs*Rsun)/(system.sma*au),
                     sbratio=(starB.Teff/starA.Teff)**4, incl=system['incl']*180/np.pi,
                     light_3=(starA.prop_of_flux_in_ap+starB.prop_of_flux_in_ap)**-1, t_zero=system.T0,
-                    f_c=np.sqrt(system.ecc)*np.cos(system.omega), f_s=np.sqrt(system.ecc)*np.sin(system.omega), 
+                    f_c=np.sqrt(system.ecc)*np.cos(system.omega), f_s=np.sqrt(system.ecc)*np.sin(system.omega),
                     period=system.P,a=(system.sma*au)/(starA.Rs*Rsun),q=(starB.Ms*Msun)/(starA.Ms*Msun),
                     ldc_1=[starA.LD_1,starA.LD_2], ldc_2=[starB.LD_1,starB.LD_2],gdc_1=starA.GD_1,gdc_2=starB.GD_1,
                     heat_1=starA.albedo, heat_2=starB.albedo, lambda_1=None,ld_1="quad",
@@ -1628,7 +1629,7 @@ def FindT0sec(t0guess, period, starA,starB,system=None):
     #print(t0guess, [fluxfromt(ti) for ti in [t0guess-0.003,t0guess,t0guess+0.003]])
     funcout=opt.minimize(fluxfromt,t0guess,bounds=(((t0guess-0.1*period,t0guess+0.1*period),)), method='TNC', tol=1e-9)
     return funcout.x[0]
-                        
+
 
 def TheoryDurationTau(arr,starA,starB,system):
     if system is not None:
@@ -1639,13 +1640,13 @@ def TheoryDurationTau(arr,starA,starB,system):
         arr['dursec_theory'] = (2./86400.)*np.sqrt( 1 - (system['sma']*au * ( 1. - system['ecc']**2 ) / ( 1 + system['ecc'] * np.cos(3*np.pi/2.0 - system['omega']) ) * np.cos(system['incl']))**2 / (starB['Rs']*Rsun + starA['Rs']*Rsun)**2)*(starB['Rs']*Rsun + starA['Rs']*Rsun)*np.sqrt(1. - system['ecc']**2)* \
                     ( 1. + system['ecc'] * np.cos(3*np.pi/2.0 - system['omega']) )**(-1.)* \
                     (system['P']*86400./(2. * np.pi * G * (starA['Ms']*Msun + starB['Ms']*Msun)))**(1./3.)
-       
+
         durpri_flat = (2./86400.)*np.sqrt( 1 - (system['sma']*au * ( 1. - system['ecc']**2 ) / ( 1 + system['ecc'] * np.cos(np.pi/2.0 - system['omega']) ) * np.cos(system['incl']))**2 / np.clip(starA['Rs']*Rsun - starB['Rs']*Rsun,0.01,500.0*Rsun)**2)*np.clip(starA['Rs']*Rsun - starB['Rs']*Rsun,0.01,500.0*Rsun)*np.sqrt(1. - system['ecc']**2)* \
                     ( 1. + system['ecc'] * np.cos(np.pi/2.0 - system['omega']) )**(-1.)* \
                     (system['P']*86400./(2. * np.pi * G * (starA['Ms']*Msun + starB['Ms']*Msun)))**(1./3.)
         arr['taupri_theory']=1-durpri_flat/arr['durpri_theory']
         arr['taupri_theory'] = 1.0 if system['pri_ecl'] and np.isnan(arr['taupri_theory']) else arr['taupri_theory']
-        
+
         dursec_flat = (2./86400.)*np.sqrt( 1 - (system['sma']*au * ( 1. - system['ecc']**2 ) / ( 1 + system['ecc'] * np.cos(3*np.pi/2.0 - system['omega']) ) * np.cos(system['incl']))**2 / np.clip(starA['Rs']*Rsun - starB['Rs']*Rsun,0.0,500*Rsun)**2)*np.clip(starA['Rs']*Rsun - starB['Rs']*Rsun,0.01,500*Rsun)*np.sqrt(1. - system['ecc']**2)* \
                     ( 1. + system['ecc'] * np.cos(3*np.pi/2.0 - system['omega']) )**(-1.)* \
                     (system['P']*86400./(2. * np.pi * G * (starA['Ms']*Msun + starB['Ms']*Msun)))**(1./3.)
@@ -1671,7 +1672,7 @@ def TheoryDurationTau(arr,starA,starB,system):
                                np.sqrt(1. - starB['ecc']**2) * \
                                ( 1. + starB['ecc'] * np.cos(3*np.pi/2.0 - starB['omega']) )**(-1.) * \
                                (starB['P']*86400./(2. * np.pi * G * (starA['Ms']*Msun + starB['Ms']*Msun)))**(1./3.)
-        
+
         durpri_flat = (2./86400.) * \
                       np.sqrt( 1 - (starB['sma']*au * ( 1. - starB['ecc']**2 ) * \
                                     ( 1 + starB['ecc'] * np.cos(np.pi/2.0 - starB['omega']) )**-1 * \
@@ -1698,7 +1699,7 @@ def TheoryDurationTau(arr,starA,starB,system):
         #            ( 1. + starB['ecc'] * np.cos(3*np.pi/2.0 - starB['omega']) )**(-1.))
         #print((starB['P']*86400./(2. * np.pi * G * (starA['Ms']*Msun + starB['Ms']*Msun)))**(1./3.))
         #print(dursec_flat)
-        arr['tausec_theory']=1-dursec_flat/arr['dursec_theory']   
+        arr['tausec_theory']=1-dursec_flat/arr['dursec_theory']
         arr['tausec_theory'] = 1.0 if starB['sec_ecl'] and np.isnan(arr['tausec_theory']) else arr['tausec_theory']
     return arr
 
@@ -1716,7 +1717,7 @@ def ObsDurationTau(arr, starA,starB,system,depslc):
     arr['dursec_obs']=0.025*(31-np.argmin(diffdepslc[61:91])+np.argmin(diffdepslc[90:]))*arr['dursec_theory']
     arr['tausec_obs']=0.025*((np.argmax(diffdepslc[61:91])-np.argmin(diffdepslc[61:91]))+(np.argmin(diffdepslc[90:])-np.argmax(diffdepslc[90:])))*(arr['dursec_theory']/arr['dursec_obs'])
     arr['lc_zoom']=','.join(depslc.astype(str))
-    
+
     return arr
 
 ##################################################################
@@ -1740,17 +1741,17 @@ def ColFromTeff(teff):
     #Values from 50th degree polynomial fit to www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt
     return np.polyval(np.array([ 6.05983799e+00, -1.25467009e+02,  1.03444427e+03, -4.24273598e+03,
         8.64992763e+03, -7.00608901e+03]),np.log10(teff))
-    
+
 def logPerFromAge(A,B,V):
     #A = Age in Myr
     if type(A)==float or type(A)==int:
         A=[A];B=[B];V=[V]
     #From Angus et al, 2014
     return np.random.normal(0.55,0.03,len(A))*np.log10(A)+np.log10(abs(np.random.normal(0.4,0.05,len(A))))+np.random.normal(0.31,0.03,len(A))*np.log10(np.power(B-V-0.45))
-    #B and V are magnitudes and a, b and n are the free parameters of our model. 
+    #B and V are magnitudes and a, b and n are the free parameters of our model.
     #We found a=0.40+0.3-0.05, b=0.31+0.05-0.02 and n=0.55+0.02-0.09
-    
-    
+
+
 def logPerFromTeff(A,Teff):
     #A = Age in Myr
     if type(A)==float or type(A)==int:
@@ -1767,7 +1768,7 @@ def logPerFromTeff(A,Teff):
 def logQfromTeff(Teff):
     #Although this is now accounted for in the LogAmp,
     # I like the current use of Q to be high for M-dwarfs and giants, so lets keep it
-    
+
     if type(Teff)==float or type(Teff)==int or type(Teff)==np.float64:
         Teff=[Teff]
     return np.random.normal(np.polyval(np.array([ 1.42857143e-04, -1.07142857e+00]),Teff),
@@ -1781,7 +1782,7 @@ def logQfromTeff(Teff):
     #We're actually gonna double this (and double the spread) to give great variation
     return np.power(10,np.random.normal(norm.ppf(pc_per)*0.25,np.tile(0.5,len(Teff)))-0.25)
     '''
-    
+
 def NewLogAmpFromTeff(Teff):
     #Now adjusted for fraction of observability observed
     if type(Teff)==float or type(Teff)==int or type(Teff)==np.float64:
@@ -1815,17 +1816,17 @@ def QPlc_fromTeff(Teff,Age,time=np.arange(0,72,0.01),err=1e-9):
         Teff=np.array([float(Teff)]);Age=np.array([Age*1e3])
     else:
         Age*=1e3
-    
+
     outlcs=[]
     q,per,amp=logQfromTeff(Teff),np.power(10,logPerFromTeff(abs(Age),Teff)),NewLogAmpFromTeff(Teff)
     #Typically Q (damping) is correlated with amplitude - pulsations are stronger than quasi-periodic behaviour.
     amp[q<=0]-=0.5*q[q<=0.0]
     amp[q>0]+=0.25*q[q>0.0]
-    
+
     #We need to adjust for the fact that the amp =std, but the quoted amp is over the full period. Effectively (Npts per period)^-0.5
     cad=np.median(np.diff(time))
     amp=amp-0.5*np.log10(per/cad)
-    
+
     amp=np.clip(amp,-15,-0.3)
     for irow in range(len(Teff)):
         #print('Teff',Teff[irow],'Age',Age[irow],'Q',q[irow],'Per',per[irow],'log Amp',amp[irow])
@@ -1844,7 +1845,7 @@ def Oscillations(M,Teff,R,time,L=None):
         if L==None:
             L=R**2*(Teff/5800)**4
 
-        fluxes = generate_stellar_fluxes((time[-1]+1.01*np.nanmedian(np.diff(time))-time[0])*u.day, M*M_sun, np.clip(Teff,4900,9800)*u.K, 
+        fluxes = generate_stellar_fluxes((time[-1]+1.01*np.nanmedian(np.diff(time))-time[0])*u.day, M*M_sun, np.clip(Teff,4900,9800)*u.K,
                                          np.clip(R,0.0,4*M)*R_sun, L*L_sun, cadence=np.nanmedian(np.diff(time))*u.day)
         if len(fluxes)>len(time):
             fluxes=fluxes[:len(time)]
@@ -1857,9 +1858,9 @@ def Oscillations(M,Teff,R,time,L=None):
                 iL=R[nrow]**2*(Teff[nrow]/5800)**4
             else:
                 iL=L[nrow]
-            #print((time[-1]-time[0])*u.day, M[nrow]*M_sun, np.clip(Teff[nrow],4900,9800)*u.K, 
+            #print((time[-1]-time[0])*u.day, M[nrow]*M_sun, np.clip(Teff[nrow],4900,9800)*u.K,
             #                             np.clip(R[nrow],0.0,4*M[nrow])*R_sun, iL*L_sun, np.nanmedian(np.diff(time))*u.day)
-            osc=generate_stellar_fluxes((time[-1]+np.nanmedian(np.diff(time))-time[0])*u.day, M[nrow]*M_sun, np.clip(Teff[nrow],4900,9800)*u.K, 
+            osc=generate_stellar_fluxes((time[-1]+np.nanmedian(np.diff(time))-time[0])*u.day, M[nrow]*M_sun, np.clip(Teff[nrow],4900,9800)*u.K,
                                          np.clip(R[nrow],0.0,4*M[nrow])*R_sun, iL*L_sun, cadence=np.round(86400*np.nanmedian(np.diff(time)))*u.sec)
             if len(osc[1])>len(time):
                 print("Ocillations produced are longer than time")
@@ -1870,22 +1871,22 @@ def Oscillations(M,Teff,R,time,L=None):
                 print(len(osc[1]),len(time),len(np.pad(osc[1],np.ceil(0.5*(len(osc[1])-len(time))),mode='reflect')))
                 osc[1]=np.pad(osc[1],np.ceil(0.5*(len(osc[1])-len(time))),mode='reflect')
                 osc[1]=osc[1][:len(time)]
-                
+
             fluxes +=[osc[1]]
-        
+
         #print(len(fluxes),len(fluxes[-1]))
         if len(fluxes)==1:
             return fluxes[0].reshape(1, -1)
         else:
             return np.vstack(fluxes)
-    
+
 def Noise(targ_df,time,returnall=False):
     target=targ_df.loc[targ_df.type=='target']
-    
+
     #Correcting Age if this column is missing using logage or, in the worst case, using Target age:
     targ_df.loc[pd.isnull(targ_df['Age'])&(~pd.isnull(targ_df['logage'])),'Age']=np.power(10,targ_df.loc[pd.isnull(targ_df['Age'])&(~pd.isnull(targ_df['logage'])),'logage']-9)
     targ_df.loc[pd.isnull(targ_df['Age']),'Age']=target['Age']
-    
+
     #Only generating variability for brightest blends:
     brightblends=targ_df.loc[targ_df.Pmag.values<(target['Pmag'].values+5)]
     oscs=np.ones((len(time),targ_df.shape[0]))
@@ -1908,7 +1909,7 @@ def Noise(targ_df,time,returnall=False):
     else:
         newcols[targ_df.Pmag.values<(target['Pmag'].values+5),3]=np.std(rots)
         newcols[targ_df.Pmag.values<(target['Pmag'].values+5),4]=np.std(oscs)
-    
+
     #print(np.shape(oscs),np.shape(rots))
     varbly=oscs+(rots-1.0)
     #RMS is per hour, so we adjust using sqrt(cadence/hr)

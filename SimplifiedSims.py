@@ -17,6 +17,8 @@ import contextlib
 
 #Make field
 
+import os
+
 def SimpleSim(hemisphere='North',N_fields=1,outfileloc='/data/PLATO/Sims',
               num_quarts=8,MP=False,ext='',overwrite=False,bright_limit=6.1):
     #Generating field(s)
@@ -25,10 +27,10 @@ def SimpleSim(hemisphere='North',N_fields=1,outfileloc='/data/PLATO/Sims',
         scope_cen=SkyCoord(253*u.deg, -30*u.deg,frame='galactic')#.transform_to(ICRS)
     else:
         scope_cen=SkyCoord(65*u.deg, 30*u.deg,frame='galactic')#.transform_to(ICRS)
-    stars,scope_frame = GenerateSimFields(scope_cen.l, scope_cen.b, 
+    stars,scope_frame = GenerateSimFields(scope_cen.l, scope_cen.b,
                                           Nfields=N_fields, Angle_with_RADEC=0*u.deg, FoV_square=32.5*u.deg, camera_offset=6.5*u.deg)
     #starcat_scope = SkyCoord(stars_all.longitude*u.deg,stars_all.latitude*u.deg,frame='galactic').transform_to(ICRS)
-    
+
     for fieldid in pd.unique(stars.loc[:,'field_ID']):
         #looping through each field.
         field_file_loc=os.path.join(outfileloc,'platosimfiles_'+str(fieldid).zfill(2)+ext+'_'+hemisphere)
@@ -37,8 +39,8 @@ def SimpleSim(hemisphere='North',N_fields=1,outfileloc='/data/PLATO/Sims',
             if os.path.isdir(field_file_loc):
                 os.system('rm -r '+field_file_loc)
             os.system('mkdir '+field_file_loc)
-            os.system('mkdir '+field_file_loc+'/lcs')            
-        
+            os.system('mkdir '+field_file_loc+'/lcs')
+
         labeldic={'BPL':[0.93,1.0],'EB':[0.83,0.93],'BEB':[0.70,0.83],'PL':[0.38,0.70],'NA':[0,0.38]}
         if not os.path.exists(os.path.join(field_file_loc,str(fieldid).zfill(2)+ext+'_generated_field')) or overwrite:
             allfieldstars=stars.loc[stars['field_ID']==fieldid]
@@ -59,13 +61,15 @@ def SimpleSim(hemisphere='North',N_fields=1,outfileloc='/data/PLATO/Sims',
 
             BesLats=np.arange(6,54.01,4.8)
             nlat=np.argmin(abs(BesLats-np.median(allfieldstars['field_cen_lat'])))
+            BesanconLoc=os.path.dirname(os.path.abspath(__file__))+"/BesanconModels/"
+
             BesFile=parseBes(GetBesanconCat(hemisphere,'wide',nlat,
-                                            outdir='/home/hosborn/Plato_Simulations/BesanconModels2/'))
+                                            outdir=BesanconLoc))
             BesFile=BesFile.loc[BesFile.Pmag>bright_limit]
             if len(BesFile)<len(allfieldstars):
                 newnlat=nlat-1 if nlat>5 else nlat+1
                 BesFile=BesFile.append(parseBes(GetBesanconCat(hemisphere,'wide',newnlat,
-                                                               outdir='/home/hosborn/Plato_Simulations/BesanconModels2/')))
+                                                               outdir=BesanconLoc)))
             #allfieldstars=pd.concat([allfieldstars,BesFile.iloc[np.random.choice(len(BesFile),len(allfieldstars))]],axis=1)
 
             BesFile['rms_hr']=getPmagRms(BesFile['Pmag'],
@@ -78,7 +82,7 @@ def SimpleSim(hemisphere='North',N_fields=1,outfileloc='/data/PLATO/Sims',
             #Randomly assigning labels (eg planet/EB/BEB/PL/nothing)
 
             BGstars=parseBes(GetBesanconCat(hemisphere,'deep',nlat,
-                                            outdir='/home/hosborn/Plato_Simulations/BesanconModels2/'))
+                                            outdir=BesanconLoc))
             BGstars=StellarStuff(BGstars.sort_values('Pmag'))
             BGstars['rms_hr']=getPmagRms(BGstars['Pmag'],
                                            np.tile(np.median(allfieldstars['Nscopes']),len(BGstars)))[0]
@@ -92,7 +96,7 @@ def SimpleSim(hemisphere='North',N_fields=1,outfileloc='/data/PLATO/Sims',
                 results = [pool.apply(getDip, args=(diptype,allfieldstars,BesFile,
                                                     BGstars,field_file_loc,num_quarts)) for diptype in ['PL','EB','BEB','BPL','NA']]
                 #[pool.apply(getDip, args=(diptype,allfieldstars,BesFile,
-                #                                    BGstars,field_file_loc,num_quarts)) 
+                #                                    BGstars,field_file_loc,num_quarts))
                 #           for diptype in ['PL','EB','BEB','BPL','NA']]
                 pool.close()
                 finalfieldstars = pd.concat(results)
@@ -193,7 +197,7 @@ def SimpleSim(hemisphere='North',N_fields=1,outfileloc='/data/PLATO/Sims',
         else:
             field_targets=open(field_file_loc+'/'+str(fieldid).zfill(2)+ext+'_starcat.txt','a')
             targs_in_list=np.genfromtxt(field_targets,dtype='str')[:,3]
-        
+
         if not os.path.isfile(field_file_loc+'/'+str(fieldid).zfill(2)+ext+'_Q1_varcat.txt'):
             for Q in np.arange(num_quarts):
                 exec('field_varblty_q'+str(Q+1)+'=open(field_file_loc+\'/\'+str(fieldid).zfill(2)+ext+\'_Q'+str(Q+1)+'_varcat.txt\',\'w\')')
@@ -222,10 +226,10 @@ def SimpleSim(hemisphere='North',N_fields=1,outfileloc='/data/PLATO/Sims',
         field_targets.close()
         for Q in np.arange(num_quarts):
             exec('field_varblty_q'+str(Q+1)+'.close()')
-            
+
         scope_cen_radec=scope_cen.transform_to(ICRS)
-        SavePlatosim3Python(str(fieldid).zfill(2)+ext, 
-                            [scope_cen_radec.ra.value, scope_cen_radec.dec.value], 
+        SavePlatosim3Python(str(fieldid).zfill(2)+ext,
+                            [scope_cen_radec.ra.value, scope_cen_radec.dec.value],
                             [field_cen_ra,field_cen_dec],
                             field_file_loc,num_quarts)
 
@@ -235,7 +239,7 @@ def StellarStuff(allfieldstars):
     allfieldstars['LD_1']=np.zeros(allfieldstars.shape[0])
     allfieldstars['LD_2']=np.zeros(allfieldstars.shape[0])
     allfieldstars['GD_1']=np.zeros(allfieldstars.shape[0])
-    
+
     nFeHs=1
     FeHbins=np.percentile(np.nan_to_num(allfieldstars['FeH'].values), list(np.linspace(0,100.00,nFeHs+1)))
     for nFeH in range(nFeHs):
@@ -255,11 +259,11 @@ def StellarStuff(allfieldstars):
                                                                     FeH=0.0,Fr='V',mod='ATLAS')
     #Getting beaming:
     allfieldstars['bfac']=Get_Beaming(allfieldstars['Teff'].values)
-    
+
     #Getting albedo:
     allfieldstars['albedo']=get_albedo(allfieldstars['Teff'].values)
     return allfieldstars
-        
+
 def getPLs(fieldstars,stars,field_file_loc,num_quarts=8):
     # get info for a "PL" dip - i.e. a transiting planet in the PLATO field.
     #INPUTS:
@@ -273,7 +277,7 @@ def getPLs(fieldstars,stars,field_file_loc,num_quarts=8):
     powlawfact=0.25 #(this boosts by 2x the occurrence rates of Earths)
     newfunc = lambda P,Rp: (np.clip(P,50,400)/50)**powlawfact * (4.0/(np.clip(Rp,0.8,4.0)))**powlawfact
     petigura = assemblePet(multfunc=newfunc)
-    
+
     stars=stars.set_index(np.core.defchararray.add('PL_',stars.index.values.astype(str)))
 
     npls=0
@@ -281,7 +285,7 @@ def getPLs(fieldstars,stars,field_file_loc,num_quarts=8):
     iterations=1
     if len(stars)>50*len(fieldstars):
         stars=stars.iloc[np.random.choice(len(stars),int(50*len(fieldstars)),replace=False)]
-    
+
     while npls<len(fieldstars):
         print("Sampling trasiting planets")
         #stars.copy()
@@ -312,7 +316,7 @@ def getPLs(fieldstars,stars,field_file_loc,num_quarts=8):
             solarsyst=tran_pls_i.index.values[tran_pls_i['parent']==unq_id]
             tran_pls_i.loc[solarsyst,'index_pl']=tran_pls_i.loc[solarsyst,'P'].argsort()
         tran_pls_i=tran_pls_i.loc[tran_pls_i['index_pl']<=10]
-        
+
         tran_pls_i=tran_pls_i.set_index(np.core.defchararray.add(tran_pls_i['parent'].values.astype(str),
                                                                  plnames[tran_pls_i['index_pl'].values.astype(int)]).astype(str))
 
@@ -334,33 +338,33 @@ def getPLs(fieldstars,stars,field_file_loc,num_quarts=8):
             (tran_pls_i['P']*86400./(2. * np.pi * G * (tran_pls_i['A_Ms']*Msun)))**(1./3.)
 
         #Dropping systems where all planets are low-SNR
-        tran_pls_i['SNRpri']=tran_pls_i['depthpri_ppm']*tran_pls_i['rms_hr']*(tran_pls_i['durpri']*24*730.5/tran_pls_i['P'])**(-0.5)  
+        tran_pls_i['SNRpri']=tran_pls_i['depthpri_ppm']*tran_pls_i['rms_hr']*(tran_pls_i['durpri']*24*730.5/tran_pls_i['P'])**(-0.5)
         for unqparent in pd.unique(tran_pls_i['parent']):
             allpls=tran_pls_i.loc[tran_pls_i['parent']==unqparent].index
             if np.max(tran_pls_i.loc[allpls,'SNRpri'])<6:
-                tran_pls_i=tran_pls_i.drop(allpls)        
-        
+                tran_pls_i=tran_pls_i.drop(allpls)
+
         #removing those planets which do not transit:
         tran_pls_i['bpri']=abs(b_ecc_pri(*tran_pls_i.loc[:,['ecc','omega','sma','incl','A_Rs']].values.swapaxes(0,1))) #impact parameter at primary eclipse
         tran_pls_i['transits']=abs(tran_pls_i['bpri'].values)<(1+tran_pls_i['Rs']/tran_pls_i['A_Rs'])
         tran_pls_i=tran_pls_i.loc[tran_pls_i['transits']]
-        
+
         tran_pls=tran_pls.append(tran_pls_i)
         print("Planet iterations= ",iterations,". systems with transiting planets:", len(pd.unique(tran_pls.parent)),"from",len(stars),"initial stars. Goal:",len(fieldstars))
         npls=len(tran_pls)
         iterations+=1
-    
+
     #Appending randomly sorted planet hosts onto fieldstars df:
     unqpars=pd.unique(tran_pls['parent'].values)
     parents2field=unqpars[np.random.choice(len(unqpars),len(fieldstars),replace=False)]
     tran_pls=tran_pls.loc[np.in1d(tran_pls['parent'],parents2field)]
     fieldstars=fieldstars.set_index(parents2field)
-    
+
     #Extra stuff to add to planets:
     tran_pls['Ms']=PlanetRtoM(tran_pls['Rs']*(Rsun/Rearth))*(Mearth/Msun)
     tran_pls['Teff']=SurfaceT(tran_pls['sma'].values,tran_pls['A_Rs'].values,tran_pls['A_Teff'].values)
     tran_pls['albedo']=get_albedo(tran_pls['Teff'].values)
-   
+
     #Need to redo contration with multiplicities...
     tran_pls['GD_1']=np.zeros(tran_pls.shape[0])
     tran_pls['LD_1']=np.ones(tran_pls.shape[0])
@@ -378,11 +382,11 @@ def getPLs(fieldstars,stars,field_file_loc,num_quarts=8):
 
     tran_pls['pri_ecl']=tran_pls['bpri']<(1+tran_pls['Rratio'])
     tran_pls['sec_ecl']=tran_pls['bsec']<(1+1.0/tran_pls['Rratio'])
-    
-    
+
+
     tran_pls['sbratio']=(tran_pls['Teff']/tran_pls['A_Teff'])**4
     tran_pls['VAR']=np.tile(False,len(tran_pls))
-    
+
     time=np.arange(0,365.25*2*(num_quarts/8),25/86400)
     #Getting planet lcs:
     for parid in parents2field:
@@ -392,7 +396,7 @@ def getPLs(fieldstars,stars,field_file_loc,num_quarts=8):
                   radius_1=(row['A_Rs']*Rsun)/(row['sma']*au), radius_2=(row['Rs']*Rsun)/(row['sma']*au),
                   sbratio=(row['Teff']/row['A_Teff'])**4, incl=row['incl']*180/np.pi,
                   light_3=0.0, t_zero=row['T0'], period=row['P'],a=(row['sma']*au)/(row['A_Rs']*Rsun),
-                  f_c=np.sqrt(row['ecc'])*np.cos(row['omega']), f_s=np.sqrt(row['ecc'])*np.sin(row['omega']), 
+                  f_c=np.sqrt(row['ecc'])*np.cos(row['omega']), f_s=np.sqrt(row['ecc'])*np.sin(row['omega']),
                   q=(row['Ms']*Msun)/(row['A_Ms']*Msun),ldc_1=[row['A_LD_1'],row['A_LD_2']], ldc_2=[1.,0.],gdc_1=row['A_GD_1'],
                   gdc_2=0.0, heat_1=row['A_albedo'], heat_2=row['albedo'], lambda_1=None,ld_1="quad",
                   ld_2="quad",grid_1='sparse',grid_2='sparse',bfac_1=row['A_bfac'],bfac_2=row['bfac'],
@@ -412,13 +416,13 @@ def getPLs(fieldstars,stars,field_file_loc,num_quarts=8):
             high=int(np.clip(np.ceil(0.125*(Q+1)*len(lc)+1),0,len(lc)))
             #Interpolating:
             lc_bool=InterpolateLC(lc[low:high],rms_hr=row['rms_hr']*1e-6,prec=0.05)
-            
+
             lcloc=field_file_loc+'/lcs/'+str(parid)+'_Q'+str(Q+1)+'.txt'
             np.savetxt(lcloc,np.column_stack((time[low:high],lc[low:high]))[lc_bool],fmt='%.3f %.8f')
-    
+
     fieldstars = fieldstars.loc[:,~fieldstars.columns.duplicated()]
     tran_pls = tran_pls.loc[:,~tran_pls.columns.duplicated()]
-    
+
     output_df=pd.merge(tran_pls,fieldstars,left_on='blend_parent',right_index=True, how='left', sort=False)
 
     return output_df
@@ -430,7 +434,7 @@ def InterpolateLC(lc,rms_hr=35e-6,prec=0.005):
     # Typically size reductions are on the order of 100x (with a precision of 0.01)
     rms_cad=rms_hr*np.sqrt(25/3600)
     n_pts_oversampled=np.sum(abs(np.diff(lc))<prec*rms_cad)
-    
+
     bool2keep_meta=np.tile(True,len(lc))
     #print(np.sum(bool2keep_meta))
     n_loop=0
@@ -438,14 +442,14 @@ def InterpolateLC(lc,rms_hr=35e-6,prec=0.005):
         bool2rem=(abs(np.diff(lc[bool2keep_meta][1:]))<(prec*rms_cad))&(abs(np.diff(lc[bool2keep_meta][:-1]))<(prec*rms_cad))
         bool2rem[1::2]*=False
         bool2keep=np.hstack((True,~bool2rem,True))
-        
+
         bool2keep_meta[bool2keep_meta]=bool2keep
         rms_cad*=np.sqrt(2)
         n_pts_oversampled=np.sum(abs(np.diff(lc[bool2keep_meta]))<prec*rms_cad)
         n_loop+=1
         #print(n_loop, np.sum(bool2keep_meta),rms_cad)
     return bool2keep_meta
-        
+
 def getEBs(fieldstars, stars,field_file_loc,num_quarts=8):
     # get info for a "EB" dip - i.e. a eclipsing binary in the PLATO field.
     #INPUTS:
@@ -456,12 +460,12 @@ def getEBs(fieldstars, stars,field_file_loc,num_quarts=8):
     nebs=0
     tran_ebs=pd.DataFrame()
     iterations=1
-    
+
     stars=stars.set_index(np.core.defchararray.add('EB_',stars.index.values.astype(str)))
-    
+
     if len(stars)>250*len(fieldstars):
         stars=stars.iloc[np.random.choice(len(stars),int(50*len(fieldstars)),replace=False)]
-    
+
     while nebs<len(fieldstars):
         print("Starting while loop for EBs with ",len(stars)," stars")
         tran_ebs_i=stars.copy()
@@ -496,7 +500,7 @@ def getEBs(fieldstars, stars,field_file_loc,num_quarts=8):
         tran_ebs_i=tran_ebs_i.drop(tran_ebs_i.loc[inflatedsystems].index)
         #Dropping systems where sma<1.5*(R_1+R2) - unstably close systems
         tran_ebs_i=tran_ebs_i.loc[(215.03203*tran_ebs_i['sma']>1.5*(tran_ebs_i['A_Rs']+tran_ebs_i['Rs']))]
-        
+
         tran_ebs_i['bpri']=abs(b_ecc_pri(tran_ebs_i['ecc'].values,tran_ebs_i['omega'].values,
                                        tran_ebs_i['sma'].values,tran_ebs_i['incl'].values,
                                        tran_ebs_i['A_Rs'].values)) #impact parameter at primary eclipse
@@ -509,14 +513,14 @@ def getEBs(fieldstars, stars,field_file_loc,num_quarts=8):
 
         #removing those ebs which do not transit:
         tran_ebs_i=tran_ebs_i.loc[tran_ebs_i['pri_ecl']|tran_ebs_i['sec_ecl']]
-        
+
         tran_ebs=tran_ebs.append(tran_ebs_i)
-        
+
         nebs=len(tran_ebs)
         print("EB / ",iterations,"iterations ", nebs," found in this run. Target:",len(fieldstars))
         iterations+=1
-        
-    
+
+
     #Appending randomly sorted planet hosts onto fieldstars df:
     tran_ebs=tran_ebs.iloc[np.random.choice(len(tran_ebs),len(fieldstars),replace=False)]
     #fieldstars=fieldstars.set_index(tran_ebs_hosts.index.values)
@@ -529,13 +533,13 @@ def getEBs(fieldstars, stars,field_file_loc,num_quarts=8):
     tran_ebs['dursec'] = (2./86400.)*np.sqrt( 1 - (tran_ebs['sma']*au * ( 1. - tran_ebs['ecc']**2 ) / ( 1 + tran_ebs['ecc'] * np.cos(3*np.pi/2.0 - tran_ebs['omega']) ) * np.cos(tran_ebs['incl']))**2 / (tran_ebs['Rs']*Rsun + tran_ebs['A_Rs']*Rsun)**2)*(tran_ebs['Rs']*Rsun + tran_ebs['A_Rs']*Rsun)*np.sqrt(1. - tran_ebs['ecc']**2)* \
                 ( 1. + tran_ebs['ecc'] * np.cos(3*np.pi/2.0 - tran_ebs['omega']) )**(-1.)* \
                 (tran_ebs['P']*86400./(2. * np.pi * G * (tran_ebs['A_Ms']*Msun + tran_ebs['Ms']*Msun)))**(1./3.)
-    
+
     tran_ebs=StellarStuff(tran_ebs) #Limb darkening, beaming, etc
-    
+
     #Depths:
     tran_ebs['depthpri_ppm']=1e6*(tran_ebs['Rratio']**2/(1+tran_ebs['Rratio']**2*(tran_ebs['Teff']/tran_ebs['A_Teff'])**4))
     tran_ebs['depthsec_ppm']=1e6*(1-(1/(1+tran_ebs['Rratio']**2*(tran_ebs['Teff']/tran_ebs['A_Teff'])**4)))
-    
+
     tran_ebs['AB_Pmag']=tran_ebs['A_Pmag'].values - \
                         2.5*np.log10(1+np.power(2.512,tran_ebs['A_Pmag'].values-tran_ebs['Pmag'].values))
     tran_ebs['rms_hr']=getPmagRms(tran_ebs['AB_Pmag'],
@@ -544,7 +548,7 @@ def getEBs(fieldstars, stars,field_file_loc,num_quarts=8):
     #SNRs:
     tran_ebs['SNRpri']=tran_ebs['depthpri_ppm']/tran_ebs['rms_hr']*(tran_ebs['durpri']*24*tran_ebs['P']/730.5)**(-0.5)
     tran_ebs['SNRsec']=tran_ebs['depthsec_ppm']/tran_ebs['rms_hr']*(tran_ebs['dursec']*24*tran_ebs['P']/730.5)**(-0.5)
-    
+
     time=np.arange(0,365.25*2*(num_quarts/8),25/86400)
     #Getting eb lcs:
     for eb,row in tran_ebs.iterrows():
@@ -552,12 +556,12 @@ def getEBs(fieldstars, stars,field_file_loc,num_quarts=8):
               radius_1=(row['A_Rs']*Rsun)/(row['sma']*au), radius_2=(row['Rs']*Rsun)/(row['sma']*au),
               sbratio=(row['Teff']/row['A_Teff'])**4, incl=row['incl']*180/np.pi,
               light_3=0.0, t_zero=row['T0'], period=row['P'],a=(row['sma']*au)/(row['A_Rs']*Rsun),
-              f_c=np.sqrt(row['ecc'])*np.cos(row['omega']), f_s=np.sqrt(row['ecc'])*np.sin(row['omega']), 
+              f_c=np.sqrt(row['ecc'])*np.cos(row['omega']), f_s=np.sqrt(row['ecc'])*np.sin(row['omega']),
               q=(row['Ms']*Msun)/(row['A_Ms']*Msun),ldc_1=[row['A_LD_1'],row['A_LD_2']], ldc_2=[row['LD_1'],row['LD_2']],
               gdc_1=row['A_GD_1'],gdc_2=row['GD_1'], heat_1=row['A_albedo'], heat_2=row['albedo'],
               lambda_1=None,ld_1="quad",ld_2="quad",grid_1='sparse',grid_2='sparse',
               bfac_1=row['A_bfac'],bfac_2=row['bfac'],verbose=False)
-        
+
         tran_ebs.loc[eb,'LC']=True
         if np.random.random()<0.5:
             varlc,vardic=GetVar(row['Age'],row['A_Ms'],row['A_Teff'],row['A_Rs'],time)
@@ -576,9 +580,9 @@ def getEBs(fieldstars, stars,field_file_loc,num_quarts=8):
             np.savetxt(lcloc,np.column_stack((time[low:high],lc[low:high]))[lc_bool],fmt='%.3f %.8f')
     stars = stars.loc[:,~stars.columns.duplicated()]
     tran_ebs = tran_ebs.loc[:,~tran_ebs.columns.duplicated()]
-    
+
     fieldstars=fieldstars.set_index(tran_ebs.index.values)
-    fieldstars=pd.merge(fieldstars,tran_ebs,left_index=True,right_index=True,how='left', sort=False)   
+    fieldstars=pd.merge(fieldstars,tran_ebs,left_index=True,right_index=True,how='left', sort=False)
 
     return fieldstars
 
@@ -589,11 +593,11 @@ def addContams(finalfieldstars, bgstars, contam_prop=0.5):
     gaia_detn_prob=init_Gaia_Source()
     contams = finalfieldstars.loc[finalfieldstars.type=='target']
     contams = contams.iloc[np.unique(contams.parent.values,return_index=True)[1]]
-    
+
     contams = contams.iloc[np.random.choice(len(contams),int(np.floor(len(contams)*contam_prop)),replace=False)].index.values
     finalfieldstars['N_contam']=0
     finalfieldstars.loc[contams,'N_contam']=np.clip(np.random.poisson(2,len(contams)).astype(int),1,6)
-    
+
     all_contam_stars=pd.DataFrame()
     print(len(contams)," targets to add ",np.sum(finalfieldstars['N_contam'])," contaminants.")
     for n,target in enumerate(contams):
@@ -609,7 +613,7 @@ def addContams(finalfieldstars, bgstars, contam_prop=0.5):
         else:
             mag=targ['Pmag']
         '''
-        
+
         index_limit=[np.searchsorted(bgstars.Pmag.values,targ['AB_Pmag']),np.searchsorted(bgstars.Pmag.values,10+targ['AB_Pmag'])]
         #print(mag,len(bgstars),index_limit[0],index_limit[1],int(targ['N_contam']))
         contam_stars=bgstars.iloc[np.random.randint(index_limit[0],index_limit[1],int(targ['N_contam']))]
@@ -628,7 +632,7 @@ def addContams(finalfieldstars, bgstars, contam_prop=0.5):
         else:
             contam_stars=contam_stars.set_index(np.array([str(targ.name)+'_'+str(n+2).zfill(2) for n in np.arange(int(targ['N_contam']))]))
         all_contam_stars=all_contam_stars.append(contam_stars)
-    
+
     return pd.concat([finalfieldstars,all_contam_stars])
 
 def getBEBs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
@@ -642,7 +646,7 @@ def getBEBs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
 
     gaia_detn_prob=init_Gaia_Source()
     nbebs=0
-    
+
     stars=stars.set_index(np.core.defchararray.add('BEB_',stars.index.values.astype(str)))
     bgstars=bgstars.set_index(np.core.defchararray.add('BEB_',bgstars.index.values.astype(str)))
 
@@ -671,7 +675,7 @@ def getBEBs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
         tran_bebs_i['blend_parent']=stars.index.values
         tran_bebs_i['type']='blend'
         tran_bebs_i['system_label']='BEB'
-        
+
         toosmall=tran_bebs_i['Ms'].values<0.1
         tran_bebs_i.loc[toosmall,'Ms']=np.random.uniform(np.tile(0.1,np.sum(toosmall)),tran_bebs_i.loc[toosmall,'A_Ms'].values)
         tran_bebs_i=tran_bebs_i.set_index(np.core.defchararray.add(tran_bebs_i['blend_parent'].values.astype(str),
@@ -709,7 +713,7 @@ def getBEBs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
         tran_bebs_i['Rratio']=tran_bebs_i['Rs'].values/tran_bebs_i['A_Rs'].values
         tran_bebs_i['pri_ecl']=tran_bebs_i['bpri']<(1+tran_bebs_i['Rratio'])
         tran_bebs_i['sec_ecl']=tran_bebs_i['bsec']<(1+1/tran_bebs_i['Rratio'])
-                                                    
+
         #how='outer',left_index=True,right_index=True)
         tran_bebs_i['deltamag']=tran_bebs_i['Pmag'].values-tran_bebs_i['A_Pmag'].values
         #combined RMS given two star's fluxes:
@@ -730,7 +734,7 @@ def getBEBs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
                     ( 1. + tran_bebs_i['ecc'] * np.cos(3*np.pi/2.0 - tran_bebs_i['omega']) )**(-1.)* \
                     (tran_bebs_i['P']*86400./(2. * np.pi * G * (tran_bebs_i['A_Ms']*Msun + tran_bebs_i['Ms']*Msun)))**(1./3.)
         tran_bebs_i=StellarStuff(tran_bebs_i) #Limb darkening, beaming, etc
-        
+
         #Assuming companion << target here:
         tran_bebs_i['dilution']=np.power(2.512,stars.loc[tran_bebs_i['blend_parent'],'Pmag'].values-tran_bebs_i['AB_Pmag'].values)
 
@@ -741,7 +745,7 @@ def getBEBs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
         #SNRs:
         tran_bebs_i['SNRpri']=tran_bebs_i['depthpri_ppm']/tran_bebs_i['rms_hr']*(tran_bebs_i['durpri']*24*tran_bebs_i['P']/730.5)**(-0.5)
         tran_bebs_i['SNRsec']=tran_bebs_i['depthsec_ppm']/tran_bebs_i['rms_hr']*(tran_bebs_i['dursec']*24*tran_bebs_i['P']/730.5)**(-0.5)
-        
+
         #Removing low-SNR BEBs:
         '''print(np.percentile(tran_bebs_i['A_Teff'],[5,50,95]),#OK
               np.percentile(tran_bebs_i['A_Ms'],[5,50,95]),#OK
@@ -763,11 +767,11 @@ def getBEBs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
         tran_bebs_i=tran_bebs_i.loc[(tran_bebs_i['SNRpri'].values>4.0)|(tran_bebs_i['SNRsec'].values>4.0)]
 
         tran_bebs=tran_bebs.append(tran_bebs_i)
-        
+
         nbebs=len(tran_bebs)
         print("BEB / ",iterations,"iterations. Currently:",nbebs,". Target:",len(fieldstars))
         iterations+=1
-    
+
     #Appending randomly sorted planet hosts onto fieldstars df:
     tran_bebs=tran_bebs.iloc[np.random.choice(len(tran_bebs),len(fieldstars),replace=False)]
     fieldstars['type']='target'
@@ -778,25 +782,25 @@ def getBEBs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
     angle=np.random.random(len(tran_bebs))*2*np.pi
     tran_bebs['ra']=fieldstars.loc[tran_bebs['blend_parent'],'ra'].values+(sep/3600)*np.cos(angle)
     tran_bebs['dec']=fieldstars.loc[tran_bebs['blend_parent'],'dec'].values+(sep/3600)*np.sin(angle)
-    
+
     tran_bebs['known_blend']=np.random.random(len(tran_bebs))<gaia_detn_prob(tran_bebs['AB_Pmag']-fieldstars.loc[tran_bebs['blend_parent'].values,'Pmag'].values,sep)
-    
+
     fieldstars['VAR']=np.tile(False,len(fieldstars))
-    
+
     time=np.arange(0,365.25*2*(num_quarts/8),25/86400)
     #Getting beb lcs:
     for beb,row in tran_bebs.iterrows():
-        
+
         lc=ellclc(t_obs=time,
               radius_1=(row['A_Rs']*Rsun)/(row['sma']*au), radius_2=(row['Rs']*Rsun)/(row['sma']*au),
               sbratio=(row['Teff']/row['A_Teff'])**4, incl=row['incl']*180/np.pi,
               light_3=0.0, t_zero=row['T0'], period=row['P'],a=(row['sma']*au)/(row['A_Rs']*Rsun),
-              f_c=np.sqrt(row['ecc'])*np.cos(row['omega']), f_s=np.sqrt(row['ecc'])*np.sin(row['omega']), 
+              f_c=np.sqrt(row['ecc'])*np.cos(row['omega']), f_s=np.sqrt(row['ecc'])*np.sin(row['omega']),
               q=(row['Ms']*Msun)/(row['A_Ms']*Msun),ldc_1=[row['A_LD_1'],row['A_LD_2']], ldc_2=[row['LD_1'],row['LD_2']],
               gdc_1=row['A_GD_1'],gdc_2=row['GD_1'], heat_1=row['A_albedo'], heat_2=row['albedo'],
               lambda_1=None,ld_1="quad",ld_2="quad",grid_1='sparse',grid_2='sparse',
               bfac_1=row['A_bfac'],bfac_2=row['bfac'],verbose=False)
-        
+
         #EB A star lc:
         if np.random.random()<0.5:
             varlc,vardic=GetVar(row['Age'],row['A_Ms'],row['A_Teff'],row['A_Rs'],time)
@@ -806,7 +810,7 @@ def getBEBs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
                 tran_bebs.loc[beb,key]=vardic[key]
             tran_bebs.loc[beb,'LC']=True
         lc=-2.5*np.log10(lc)
-        
+
         #Target blend_parentlc:
         if np.random.random()<0.5:
             lc_par,parvardic=GetVar(fieldstars.loc[row['blend_parent'],'Age'],fieldstars.loc[row['blend_parent'],'Ms'],
@@ -821,24 +825,24 @@ def getBEBs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
             lcloc_par=False
             fieldstars.loc[row['blend_parent'],'LC']=False
             fieldstars.loc[row['blend_parent'],'VAR']=False
-        
+
         print("writing",field_file_loc,beb)
         for Q in np.arange(num_quarts):
             low=int(np.clip(np.floor(0.125*(Q)*len(lc)-1),0,len(lc)))
             high=int(np.clip(np.ceil(0.125*(Q+1)*len(lc)+1),0,len(lc)))
             #Interpolating:
             lc_bool=InterpolateLC(lc[low:high],rms_hr=row['rms_hr']*1e-6)
-            
+
             lcloc=field_file_loc+'/lcs/'+str(beb)+'_Q'+str(Q+1)+'.txt'
             np.savetxt(lcloc,np.column_stack((time[low:high],lc[low:high]))[lc_bool],fmt='%.3f %.8f')
             if lcloc_par:
                 lc_bool_par=InterpolateLC(lc_par[low:high],rms_hr=fieldstars.loc[row['blend_parent'],'rms_hr']*1e-6)
                 np.savetxt(field_file_loc+'/lcs/'+str(row['blend_parent'])+'_Q'+str(Q+1)+'.txt',
                            np.column_stack((time[low:high],lc_par[low:high]))[lc_bool_par],fmt='%.3f %.8f')
-    
+
     tran_bebs = tran_bebs.loc[:,~tran_bebs.columns.duplicated()]
     fieldstars = fieldstars.loc[:,~fieldstars.columns.duplicated()]
-    
+
     return pd.concat([fieldstars,tran_bebs])
 #pd.concat([fieldstars,tran_bebs],axis=0)
 
@@ -859,10 +863,10 @@ def getBPLs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
     # This function gets BG transiting planets, given some star catologue and a dictionary of lightcurves
     bgstars=bgstars.loc[bgstars.Pmag<18]
     bgstars=bgstars.sort_values('Pmag')
-    
+
     giant_enhance = lambda P,Rp:6-1*(np.clip(abs(9-Rp),0.75,5.0))#This enhances the number of giant planets by a factor of 5
     petigura = assemblePet(giant_enhance)
-    
+
     nbpls=0
     tran_bpls=pd.DataFrame()
     iterations=1
@@ -878,7 +882,7 @@ def getBPLs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
         '''
         if len(bgstars)<len(stars):
             bgstars=np.choice(
-        
+
         # then takes uniform sample between them
         choice_list=list(np.round(np.random.uniform(np.searchsorted(bgstars.Pmag.values,stars.Pmag.values),
                                                     np.searchsorted(bgstars.Pmag.values,6+stars.Pmag.values))).astype(int))
@@ -948,10 +952,10 @@ def getBPLs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
                                        tran_bpls_i['A_Rs'].values)) #impact parameter at primary eclipse
         tran_bpls_i['Rratio']=tran_bpls_i['Rs'].values/tran_bpls_i['A_Rs'].values
         tran_bpls_i['pri_ecl']=tran_bpls_i['bpri']<(1+tran_bpls_i['Rratio'])
-        
+
         #removing those  which do not transit:
         tran_bpls_i=tran_bpls_i.loc[tran_bpls_i['pri_ecl']]
-        
+
 
         tran_bpls_i['durpri'] = (2./86400.)*np.sqrt( 1 - (tran_bpls_i['sma']*au * ( 1. - tran_bpls_i['ecc']**2 ) / ( 1 + tran_bpls_i['ecc'] * np.cos(np.pi/2.0 - tran_bpls_i['omega']) ) * np.cos(tran_bpls_i['incl']))**2 / (tran_bpls_i['A_Rs']*Rsun + tran_bpls_i['Rs']*Rsun)**2)*(tran_bpls_i['Rs']*Rsun + tran_bpls_i['A_Rs']*Rsun)*np.sqrt(1. - tran_bpls_i['ecc']**2)* \
                     ( 1. + tran_bpls_i['ecc'] * np.cos(np.pi/2.0 - tran_bpls_i['omega']) )**(-1.)* \
@@ -965,7 +969,7 @@ def getBPLs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
 
         #SNRs:
         tran_bpls_i['SNRpri']=tran_bpls_i['depthpri_ppm']/tran_bpls_i['A_rms_hr']*(tran_bpls_i['durpri']*24*tran_bpls_i['P']/730.5)**(-0.5)
-        
+
         #print(np.sum(tran_bpls_i['SNRpri']>3.0),"/",len(tran_bpls_i),"have high-SNR with median of:",np.median(tran_bpls_i['SNRpri']))
         #Removing low-SNR bpls:
         tran_bpls_i=tran_bpls_i.loc[tran_bpls_i['SNRpri']>3.0]
@@ -973,7 +977,7 @@ def getBPLs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
         #Removing 2nd/3rd/4th planets (which have low-SNR)
         tran_bpls_i = tran_bpls_i.sort_values('SNRpri')
         tran_bpls_i = tran_bpls_i.drop_duplicates(subset='parent', keep="first")
-        
+
         tran_bpls_i=tran_bpls_i.set_index(np.core.defchararray.add(tran_bpls_i['parent'].values.astype(str),'_Ab'))
 
         tran_bpls=tran_bpls.append(tran_bpls_i)
@@ -984,13 +988,13 @@ def getBPLs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
 
     #Appending randomly sorted planet hosts onto fieldstars df:
     tran_bpls=tran_bpls.iloc[np.random.choice(len(tran_bpls),len(fieldstars),replace=False)]
-    
+
 
     #Extra stuff to add to planets:
     tran_bpls['Ms']=PlanetRtoM(tran_bpls['Rs']*(Rsun/Rearth))*(Mearth/Msun)
     tran_bpls['Teff']=SurfaceT(tran_bpls['sma'].values,tran_bpls['A_Rs'].values,tran_bpls['A_Teff'].values)
     tran_bpls['albedo']=get_albedo(tran_bpls['Teff'].values)
-   
+
     #Need to redo contration with multiplicities...
     tran_bpls['GD_1']=np.zeros(tran_bpls.shape[0])
     tran_bpls['LD_1']=np.ones(tran_bpls.shape[0])
@@ -1011,7 +1015,7 @@ def getBPLs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
     tran_bpls['ra']=fieldstars.loc[tran_bpls.blend_parent,'ra'].values+(sep/3600)*np.cos(angle)
     tran_bpls['dec']=fieldstars.loc[tran_bpls.blend_parent,'dec'].values+(sep/3600)*np.sin(angle)
     tran_bpls['known_blend']=np.random.random(len(tran_bpls))<gaia_detn_prob(tran_bpls['A_Pmag'].values-fieldstars.loc[tran_bpls['blend_parent'],'Pmag'].values,sep)
-    
+
     time=np.arange(0,365.25*2*(num_quarts/8),25/86400)
     #Getting bpl lcs:
     for bpl,row in tran_bpls.iterrows():
@@ -1019,12 +1023,12 @@ def getBPLs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
               radius_1=(row['A_Rs']*Rsun)/(row['sma']*au), radius_2=(row['Rs']*Rsun)/(row['sma']*au),
               sbratio=(row['Teff']/row['A_Teff'])**4, incl=row['incl']*180/np.pi,
               light_3=0.0, t_zero=row['T0'], period=row['P'],a=(row['sma']*au)/(row['A_Rs']*Rsun),
-              f_c=np.sqrt(row['ecc'])*np.cos(row['omega']), f_s=np.sqrt(row['ecc'])*np.sin(row['omega']), 
+              f_c=np.sqrt(row['ecc'])*np.cos(row['omega']), f_s=np.sqrt(row['ecc'])*np.sin(row['omega']),
               q=(row['Ms']*Msun)/(row['A_Ms']*Msun),ldc_1=[row['A_LD_1'],row['A_LD_2']], ldc_2=[0.0,1.0],
               gdc_1=row['A_GD_1'],gdc_2=0.0, heat_1=row['A_albedo'], heat_2=row['albedo'],
               lambda_1=None,ld_1="quad",ld_2="quad",grid_1='sparse',grid_2='sparse',
               bfac_1=row['A_bfac'],bfac_2=row['bfac'],verbose=False)
-        
+
         #Planet host variability:
         if np.random.random()<0.5:
             varlc,vardic=GetVar(row['Age'],row['A_Ms'],row['A_Teff'],row['A_Rs'],time)#Age,Ms,Teff,Rs,time
@@ -1034,7 +1038,7 @@ def getBPLs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
             tran_bpls.loc[bpl,'VAR']=True
         tran_bpls.loc[bpl,'LC']=True
         lc=-2.5*np.log10(lc)
-        
+
         #Target blend lc:
         if np.random.random()<0.5:
             lc_par,parvardic=GetVar(fieldstars.loc[row['blend_parent'],'Age'],fieldstars.loc[row['blend_parent'],'Ms'],
@@ -1042,14 +1046,14 @@ def getBPLs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
             for key in parvardic:
                 fieldstars.loc[row['blend_parent'],key]=parvardic[key]
             fieldstars.loc[row['blend_parent'],'VAR']=True
-            
+
             fieldstars.loc[row['blend_parent'],'LC']=True
             lcloc_par=True
             lc_par=-2.5*np.log10(lc_par)
         else:
             lcloc_par=False
             fieldstars.loc[row['blend_parent'],'LC']=False
-        
+
         print("writing",field_file_loc,bpl)
         for Q in np.arange(num_quarts):
             low=int(np.clip(np.floor(0.125*(Q)*len(lc)-1),0,len(lc)))
@@ -1057,13 +1061,13 @@ def getBPLs(fieldstars,stars,bgstars,field_file_loc,num_quarts=8):
             #Interpolating:
             lc_bool=InterpolateLC(lc[low:high],rms_hr=row['A_rms_hr']*1e-6)
             lcloc=field_file_loc+'/lcs/'+str(bpl)+'_Q'+str(Q+1)+'.txt'
-            np.savetxt(lcloc,np.column_stack((time[low:high],lc[low:high]))[lc_bool],fmt='%.3f %.8f')            
+            np.savetxt(lcloc,np.column_stack((time[low:high],lc[low:high]))[lc_bool],fmt='%.3f %.8f')
             if lcloc_par:
                 lc_bool_par=InterpolateLC(lc_par[low:high],rms_hr=fieldstars.loc[row['blend_parent'],'rms_hr']*1e-6)
                 np.savetxt(field_file_loc+'/lcs/'+str(bpl)+'_Q'+str(Q+1)+'.txt',
                            np.column_stack((time[low:high],lc_par[low:high]))[lc_bool_par],fmt='%.3f %.8f')
                 lcloc_par=False
-            
+
     return pd.concat([fieldstars,tran_bpls],axis=0)
 
 def getNAs(fieldstars,stars,field_file_loc,num_quarts=8):
@@ -1077,7 +1081,7 @@ def getNAs(fieldstars,stars,field_file_loc,num_quarts=8):
     fieldstars=pd.merge(fieldstars.set_index(newstars.index.values),newstars,left_index=True,right_index=True,how='left', sort=False)
     fieldstars=fieldstars.set_index(np.core.defchararray.add('NA_',fieldstars.index.values.astype(str)))
     time=np.arange(0,365.25*2*(num_quarts/8),25/86400)
-    for star,row in fieldstars.iterrows():        
+    for star,row in fieldstars.iterrows():
         if np.random.random()<0.5:
             lc,vardic=GetVar(row['Age'],row['Ms'],row['Teff'],row['Rs'],time)
             fieldstars.loc[star,'VAR']=True
@@ -1085,7 +1089,7 @@ def getNAs(fieldstars,stars,field_file_loc,num_quarts=8):
             for key in vardic:
                 fieldstars.loc[star,key]=vardic[key]
             stars.loc[star,'VAR']=True
-            
+
             print("writing",field_file_loc,star)
             for Q in np.arange(num_quarts):
                 low=int(np.clip(np.floor(0.125*(Q)*len(lc)-1),0,len(lc)))
@@ -1097,7 +1101,7 @@ def getNAs(fieldstars,stars,field_file_loc,num_quarts=8):
         else:
             fieldstars.loc[star,'LC']=False
     return fieldstars
-    
+
 def getDip(diptype,fieldstars,stars,bgstars,field_file_loc,file_prefix,num_quarts=8):
     # For multiprocessing - given label, assigns the requisite getDIP function
     '''
@@ -1131,7 +1135,7 @@ def getDip(diptype,fieldstars,stars,bgstars,field_file_loc,file_prefix,num_quart
         traceback.print_exc()
         print("problem when getting",diptype,":")
         print(e)
-    
+
 def GetVar(Age,Ms,Teff,Rs,time):
     # Gets variability of a star - both osscillations and rotation
     # - Age in Gyr
@@ -1139,10 +1143,10 @@ def GetVar(Age,Ms,Teff,Rs,time):
     # - Teff (K)
     # - Rs in solar radii
     # - time array
-    
+
     #Getting stochastic SHM oscillations:
     oscs=Oscillations(Ms,Teff,Rs,time)[0]
-    
+
     #Getting quasi-periodic rotation:
     rots,qpcols=QPlc_fromTeff(Teff,Age,time)
     rots=rots[0]
@@ -1150,9 +1154,9 @@ def GetVar(Age,Ms,Teff,Rs,time):
         rots=rots[:len(time)]
     if len(oscs)>len(time):
         oscs=oscs[:len(time)]
-    
+
     qpcols={'rot_Q':qpcols[0][0],'rot_per':qpcols[0][1],'rot_amp':qpcols[0][2],"rot_std":np.std(rots),"osc_std":np.std(oscs)}
-    
+
     #print(np.shape(oscs),np.shape(rots))
     varbly=oscs+(rots-1.0)
 
@@ -1171,17 +1175,17 @@ def rebin_hdf5_file(hdf5file,starcatloc,injcatloc,bin_factor=24):
     idxarr=np.digitize(t,np.arange(t[0],t[-1]+0.1*cad,n_per_bin*cad))
     newt=np.array([np.average(t[idxarr==n]) for n in np.unique(idxarr)])
     imgids=np.array(list(platosim_output.root.Images._v_children.keys()))
-    
+
     #Access star catalogue to get the stars.
     df=pd.DataFrame.from_csv(injcatloc)
     df.loc[pd.isnull(df['parent']),'parent']=df.loc[pd.isnull(df['parent'])].index.values
-    df=df.drop_duplicates(subset='parent')    
+    df=df.drop_duplicates(subset='parent')
     df=df.set_index(df['parent'].values)
 
     starcat=pd.read_table(starcatloc)
     starcat=starcat.set_index(starcat['ID'].values)
     df=pd.merge(df,starcat.rename(columns={"#RA(deg)":"PS3_RA","DEC(deg)":"PS3_Dec","Vmag":"PS3_Pmag","ID":"PS3_ID","Known":"PM3_Known"}),left_index=True,right_index=True)
-    
+
     targets=df.loc[df['type']=='target']
     targets_in_starcat=SkyCoord(targets['PS3_RA'].values*u.deg,targets['PS3_Dec'].values*u.deg)
     stars_in_hdf5=SkyCoord(platosim_output.root.StarCatalog.RA[:]*u.deg,platosim_output.root.StarCatalog.Dec[:]*u.deg)
@@ -1193,7 +1197,7 @@ def rebin_hdf5_file(hdf5file,starcatloc,injcatloc,bin_factor=24):
     targets=targets.loc[targets['hdf5_idx_dist']<0.05]
     targets['colPix_ccd']=np.array([platosim_output.root.StarCatalog['colPix'][ix] for ix in targets['hdf5_idx'].values])
     targets['rowPix_ccd']=np.array([platosim_output.root.StarCatalog['rowPix'][ix] for ix in targets['hdf5_idx'].values])
-    
+
     targets['colPix_subField']=targets['colPix_ccd'] - platosim_output.root.InputParameters.SubField._v_attrs['ZeroPointColumn']
     targets['rowPix_subField']=targets['rowPix_ccd'] - platosim_output.root.InputParameters.SubField._v_attrs['ZeroPointRow']
 
@@ -1205,13 +1209,13 @@ def rebin_hdf5_file(hdf5file,starcatloc,injcatloc,bin_factor=24):
     #Open new hdf5 file and init data
     if os.path.exists(hdf5file.replace('.hdf5','_binned_imgts.hdf5')):
         os.system("rm "+hdf5file.replace('.hdf5','_binned_imgts.hdf5'))
-    
+
     hdf5_new = h5py.File(hdf5file.replace('.hdf5','_binned_imgts.hdf5'), mode='w')
     hdf5_new.create_dataset("Time", (len(newt),), np.float32,newt)
-    
+
     hdf5_new.create_dataset("image_start", (100,100,), np.int16, platosim_output.root.Images[imgids[0]])
     hdf5_new.create_dataset("image_end", (100,100,), np.int16, platosim_output.root.Images[imgids[-1]])
-    
+
     img_names=[]
     for n_idx in np.unique(idxarr):
         img_names+=[str(imgids[idxarr==n_idx][0])+'-'+str(imgids[idxarr==n_idx][-1]).replace('image','')]
@@ -1231,7 +1235,7 @@ def rebin_hdf5_file(hdf5file,starcatloc,injcatloc,bin_factor=24):
         i_star.attrs['Vmag'] = platosim_output.root.StarCatalog['Vmag'][targets.loc[i_s,'hdf5_idx']]
         i_star.attrs['colPix'] = targets.loc[i_s,'colPix_subField']
         i_star.attrs['rowPix'] = targets.loc[i_s,'rowPix_subField']
-        
+
         #platosim_output.root.StarCatalog['rowPix'][targets.loc[i_s,'hdf5_idx']]
         i_star.attrs['aperture_radius'] = np.clip(3.5+0.5*(9-i_star.attrs.get('Vmag')),3.5,5)
         col_in=abs(np.arange(100)-i_star.attrs.get('colPix'))<=i_star.attrs.get('aperture_radius')
@@ -1243,14 +1247,14 @@ def rebin_hdf5_file(hdf5file,starcatloc,injcatloc,bin_factor=24):
 
         i_star.attrs['row_aperture_diameter']=np.sum(row_in)
         i_star.attrs['col_aperture_diameter']=np.sum(col_in)
-        
+
         i_star.create_dataset('imagettes',(len(newt),i_star.attrs.get('row_aperture_diameter'),i_star.attrs.get('col_aperture_diameter'),),dtype='f')
-        
+
     for n,ix_img in enumerate(np.unique(idxarr)):
         bin_img=np.average(np.dstack([platosim_output.root.Images[imgid] for imgid in imgids[idxarr==ix_img]]),axis=2)
         for i_s in targets.index.values:
             stars_group[i_s]['imagettes'][n]=mask_nd(bin_img,stars_group[i_s]['aperture'][:,:])
-        
+
         if n%500==0:
             print(n,"imagettes processed / ",np.max(np.unique(idxarr)))
     hdf5_new.close()
@@ -1261,15 +1265,15 @@ if __name__=="__main__":
     #SimplifiedSims.
     #Arguments:
     # hemisphere = North or South
-    # N_fields =  output folder location 
+    # N_fields =  output folder location
     # ext = string to add to output files
-    # folder =  output folder location 
+    # folder =  output folder location
     # num_quarts = number of quarters
     # MP - whether to use multiprocessing or not
     # overwrite = whether to overwrite previous data
     #e.g.:
     # python SimplifiedSims.py North 1 test_oct /data/PLATO/Sims 1 True True
-    
+
     defaults=['','North',1,'','/data/PLATO/Sims',8,False]
     if len(sys.argv)<8:
         args=sys.argv
