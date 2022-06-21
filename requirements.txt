@@ -1,4 +1,4 @@
-numpy == 1.16.3
+numpy == 1.22.0
 re == 2.2.1
 ctypes == 1.1.0
 zlib == 1.0
